@@ -65,12 +65,6 @@ var FACTOR_HINTS = {
 // ── AUTH STATE ────────────────────────────────────────────────────────────────
 var currentUser = null;
 
-// Allowed emails — only these addresses can access the app
-var ALLOWED_EMAILS = [
-  'haley@example.com',  // ← replace with your real email
-  'dave@example.com',   // ← replace with Dave's real email
-];
-
 // ── APP STATE ─────────────────────────────────────────────────────────────────
 var allEntries = [];
 var currentFilter = 'all';
