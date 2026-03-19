@@ -2,6 +2,11 @@
 // Credentials come from config.js
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+var ALLOWED_EMAILS = [
+  'haleyelaineg@gmail.com',
+  'davidvincent2007@gmail.com',
+  'admin@hd-enterprises.us',
+];
 
 // ── DEFAULTS ──────────────────────────────────────────────────────────────────
 var DEFAULT_TAGS = [
