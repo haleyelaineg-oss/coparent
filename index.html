@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>CoParent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="logo">Parenting <span>Log</span></div>
+</header>
+
+<div class="cfg">
+  <label>Supabase URL</label>
+  <input type="text" id="sb-url" placeholder="https://xxxx.supabase.co" oninput="saveConfig()"/>
+  <label>Anon key</label>
+  <input type="text" id="sb-key" placeholder="eyJhbG..." oninput="saveConfig()"/>
+  <button class="btn btn-sm" onclick="testConn()">Connect</button>
+  <span class="cfg-st s-idle" id="conn-st">Add Supabase credentials and click Connect</span>
+</div>
+
+<div class="shell">
+<nav class="sidebar">
+  <div class="nav-sec">
+    <div class="nav-lbl">Home</div>
+    <button class="nb active" onclick="nav('dashboard',this)"><span class="ni">⌂</span> Dashboard</button>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Daily</div>
+    <button class="nb" onclick="nav('reflection',this)"><span class="ni">☀</span> Daily Reflection</button>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Capture</div>
+    <button class="nb" onclick="nav('incident',this)"><span class="ni">!</span> Incident Capture</button>
+    <button class="nb" onclick="nav('positive',this)"><span class="ni">♡</span> Positive Moments</button>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Review</div>
+    <button class="nb" onclick="nav('viewlog',this)"><span class="ni">≡</span> View Log <span class="nc" id="nav-count">0</span></button>
+    <button class="nb" onclick="nav('summary',this)"><span class="ni">◎</span> Summary & Export</button>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Admin</div>
+    <button class="nb" onclick="nav('settings',this)"><span class="ni">⚙</span> Settings</button>
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- DASHBOARD -->
+<div class="pg active" id="pg-dashboard">
+  <div class="dash-greeting" id="dash-greeting">Good morning.</div>
+  <div class="dash-date" id="dash-date"></div>
+  <div class="quick-actions">
+    <button class="qa-btn primary" onclick="nav('reflection',document.querySelector('.nb:nth-child(1)'))">
+      <div class="qa-icon">☀</div>
+      <div class="qa-label">Start Daily Reflection</div>
+      <div class="qa-sub">Today's guided check-in</div>
+    </button>
+    <button class="qa-btn" onclick="nav('incident',null)">
+      <div class="qa-icon">!</div>
+      <div class="qa-label">Log an Incident</div>
+      <div class="qa-sub">Document something that happened</div>
+    </button>
+    <button class="qa-btn" onclick="nav('positive',null)">
+      <div class="qa-icon">♡</div>
+      <div class="qa-label">Positive Moment</div>
+      <div class="qa-sub">Capture something good</div>
+    </button>
+    <button class="qa-btn" onclick="nav('viewlog',null)">
+      <div class="qa-icon">≡</div>
+      <div class="qa-label">View Log</div>
+      <div class="qa-sub">Browse all entries</div>
+    </button>
+  </div>
+  <div class="card">
+    <div class="ct">Check-In Items</div>
+    <div id="dash-checkins"><div class="empty">No check-in items yet. Add them in Settings.</div></div>
+  </div>
+</div>
+
+<!-- DAILY REFLECTION -->
+<div class="pg" id="pg-reflection">
+  <h1 class="pg-title">Daily Reflection</h1>
+  <p class="pg-sub" id="ref-date-sub"></p>
+  <div class="flow-wrap">
+    <div class="flow-progress" id="flow-progress"></div>
+
+    <!-- STEP 0: Logger + date -->
+    <div class="flow-step active" id="step-0">
+      <div class="flow-q">Who's reflecting?</div>
+      <div class="card" style="margin-top:.5rem;">
+        <div class="logger-row" style="margin-bottom:0;">
+          <span>Logging as</span>
+          <select id="ref-logger" onchange="setLogger(this.value)"><option value="Haley">Haley</option><option value="Dave">Dave</option></select>
+          <small>remembered on this device</small>
+        </div>
+      </div>
+      <div class="btn-row"><button class="btn btn-p" onclick="flowNext()">Next →</button></div>
+    </div>
+
+    <!-- STEP 1: Kids home? -->
+    <div class="flow-step" id="step-1">
+      <div class="flow-q">Were the kids home today?</div>
+      <div class="flow-hint">Or were they at mom's, grandparents', etc.?</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:.5rem;">
+        <button class="btn btn-p" onclick="setKidsHome(true)">Yes — kids were home</button>
+        <button class="btn" onclick="setKidsHome(false)">No — not home today</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Moods -->
+    <div class="flow-step" id="step-2">
+      <div class="flow-q">How were the kids today?</div>
+      <div class="flow-hint">Select the mood that best describes each kid's overall energy.</div>
+      <div id="mood-sections"></div>
+      <div class="btn-row">
+        <button class="btn" onclick="flowBack()">← Back</button>
+        <button class="btn btn-p" onclick="flowNext()">Next →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Struggles -->
+    <div class="flow-step" id="step-3">
+      <div class="flow-q">Any struggles or difficult moments?</div>
+      <div class="flow-hint">Behavioral issues, emotional moments, anything worth noting per kid.</div>
+      <div id="struggle-sections"></div>
+      <div class="btn-row">
+        <button class="btn" onclick="flowBack()">← Back</button>
+        <button class="btn btn-p" onclick="flowNext()">Next →</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Positive moments -->
+    <div class="flow-step" id="step-4">
+      <div class="flow-q">Any positive moments today?</div>
+      <div class="flow-hint">Wins, connection, something that made you smile. Optional but good to capture.</div>
+      <div id="positive-sections"></div>
+      <div class="btn-row">
+        <button class="btn" onclick="flowBack()">← Back</button>
+        <button class="btn btn-p" onclick="flowNext()">Next →</button>
+      </div>
+    </div>
+
+    <!-- STEP 5: Mary -->
+    <div class="flow-step" id="step-5">
+      <div class="flow-q">Any communication with Mary today?</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:.5rem;">
+        <button class="btn btn-p" onclick="setMaryContact(true)">Yes</button>
+        <button class="btn" onclick="setMaryContact(false)">No</button>
+      </div>
+    </div>
+
+    <!-- STEP 6: Mary feelings -->
+    <div class="flow-step" id="step-6">
+      <div class="flow-q">How did the communication go?</div>
+      <div class="flow-hint">Rate the interaction and note how it made you feel.</div>
+      <div class="card">
+        <div class="ct">Interaction Quality</div>
+        <div class="lk-track" id="mary-likert">
+          <button class="lk-btn" onclick="setMaryLikert(1,this)">1<br><span style="font-size:10px;font-weight:400">Pleasant</span></button>
+          <button class="lk-btn" onclick="setMaryLikert(2,this)">2<br><span style="font-size:10px;font-weight:400">Neutral</span></button>
+          <button class="lk-btn" onclick="setMaryLikert(3,this)">3<br><span style="font-size:10px;font-weight:400">Tense</span></button>
+          <button class="lk-btn" onclick="setMaryLikert(4,this)">4<br><span style="font-size:10px;font-weight:400">Difficult</span></button>
+          <button class="lk-btn" onclick="setMaryLikert(5,this)">5<br><span style="font-size:10px;font-weight:400">Distressing</span></button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct">How Did It Make You Feel?</div>
+        <div class="feelings-wrap" id="feelings-wrap"></div>
+      </div>
+      <div class="card">
+        <div class="fg1">
+          <label class="fgl">Notes about the interaction (optional)</label>
+          <textarea id="mary-notes" placeholder="What happened, what was said, context..."></textarea>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="flowBack()">← Back</button>
+        <button class="btn btn-p" onclick="flowNext()">Next →</button>
+      </div>
+    </div>
+
+    <!-- STEP 7: Review & save -->
+    <div class="flow-step" id="step-7">
+      <div class="flow-q">Ready to save today's reflection?</div>
+      <div class="flow-hint">Here's a summary of what you've captured.</div>
+      <div class="card" id="review-summary"></div>
+      <div class="btn-row">
+        <button class="btn" onclick="flowBack()">← Back</button>
+        <button class="btn btn-p" onclick="saveReflection()">Save Reflection</button>
+      </div>
+      <div class="toast t-ok" id="ref-ok"></div>
+      <div class="toast t-err" id="ref-err"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- INCIDENT CAPTURE -->
+<div class="pg" id="pg-incident">
+  <h1 class="pg-title">Incident Capture</h1>
+  <p class="pg-sub">Document incidents as soon as possible. Specificity and timing matter.</p>
+  <div class="card">
+    <div class="logger-row">
+      <span>Logging as</span>
+      <select id="inc-logger" onchange="setLogger(this.value)"><option value="Haley">Haley</option><option value="Dave">Dave</option></select>
+      <small>remembered on this device</small>
+    </div>
+    <div class="ct">Basic Info</div>
+    <div class="fg">
+      <div class="fg1">
+        <label class="fgl">Date & Time</label>
+        <input type="datetime-local" id="inc-date"/>
+      </div>
+      <div class="fg1">
+        <label class="fgl">Which Kid(s)?</label>
+        <div class="kids-row">
+          <div class="kchip" id="ick-Landon" onclick="toggleKid('inc','Landon')">Landon</div>
+          <div class="kchip" id="ick-Luke" onclick="toggleKid('inc','Luke')">Luke</div>
+          <div class="kchip" id="ick-Leo" onclick="toggleKid('inc','Leo')">Leo</div>
+          <div class="kchip" id="ick-All" onclick="toggleKid('inc','All')">All three</div>
+        </div>
+      </div>
+      <div class="fg1 full">
+        <label class="fgl">Best-Interest Factor (MCL 722.23)</label>
+        <select id="inc-factor" onchange="updateHint()">
+          <option value="">Select the most relevant factor...</option>
+          <option value="(A) Emotional bond">(A) Emotional bond & love</option>
+          <option value="(B) Guidance & education">(B) Guidance, education & religion</option>
+          <option value="(C) Material & medical needs">(C) Food, clothing, medical care</option>
+          <option value="(D) Stable environment">(D) Stable, satisfactory environment</option>
+          <option value="(E) Permanence of home">(E) Permanence of family unit</option>
+          <option value="(F) Moral fitness">(F) Moral fitness</option>
+          <option value="(G) Mental & physical health">(G) Mental & physical health</option>
+          <option value="(H) School & community record">(H) Home, school & community record</option>
+          <option value="(I) Child's preference">(I) Child's expressed preference</option>
+          <option value="(J) Co-parenting cooperation">(J) Co-parenting / boundary violations</option>
+          <option value="(K) Domestic violence">(K) Domestic violence / emotional abuse</option>
+          <option value="(L) Other relevant factor">(L) Other relevant factor</option>
+        </select>
+        <div class="fhint" id="inc-hint"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">What Happened</div>
+    <div class="fg">
+      <div class="fg1 full">
+        <label class="fgl">Description</label>
+        <textarea id="inc-incident" placeholder="Describe objectively — setting, who was present, exactly what was said or done, visible emotional responses."></textarea>
+      </div>
+      <div class="fg1 full">
+        <label class="fgl">Direct Quote from a Child (if any)</label>
+        <textarea id="inc-quote" style="min-height:58px;" placeholder='e.g. Luke said unprompted: "I want to live here 80% of the time."'></textarea>
+      </div>
+      <div class="fg1 full">
+        <label class="fgl">Witnesses</label>
+        <input type="text" id="inc-witnesses" placeholder="e.g. Dave present, teacher Mrs. Johnson"/>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">Child Distress Level</div>
+    <div class="lk-track" id="inc-distress">
+      <button class="lk-btn" onclick="setDistress(1,this)">1<br><span style="font-size:10px;font-weight:400">None</span></button>
+      <button class="lk-btn" onclick="setDistress(2,this)">2<br><span style="font-size:10px;font-weight:400">Mild</span></button>
+      <button class="lk-btn" onclick="setDistress(3,this)">3<br><span style="font-size:10px;font-weight:400">Moderate</span></button>
+      <button class="lk-btn" onclick="setDistress(4,this)">4<br><span style="font-size:10px;font-weight:400">High</span></button>
+      <button class="lk-btn" onclick="setDistress(5,this)">5<br><span style="font-size:10px;font-weight:400">Severe</span></button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">Tags</div>
+    <div class="tags-wrap" id="inc-tags"></div>
+    <div class="fhint" style="margin-top:8px;">Select all that apply. Manage tags in Settings.</div>
+  </div>
+  <div class="card">
+    <div class="ct">Attachments</div>
+    <div class="att-zone" onclick="document.getElementById('inc-files').click()">
+      <p>Click to attach files</p>
+      <small>Screenshots, texts, emails, school records, photos</small>
+      <input type="file" id="inc-files" multiple style="display:none" onchange="handleFiles('inc',this.files)"/>
+    </div>
+    <div class="att-list" id="inc-att-list"></div>
+  </div>
+  <div class="card">
+    <div class="ct">Flag This Entry</div>
+    <div class="tog-row" id="tog-flagged" onclick="togFlag()" style="display:flex;align-items:center;justify-content:space-between;padding:10px 13px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:background .15s;">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);">Flag for Motion Narrative</div>
+        <div style="font-size:11px;color:var(--text3);">Highlight this in the custody motion</div>
+      </div>
+      <div id="flag-sw" style="width:36px;height:20px;background:var(--surface3);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;"><div style="position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15);"></div></div>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn" onclick="clearIncident()">Clear</button>
+    <button class="btn btn-p" onclick="saveIncident()">Save Incident</button>
+  </div>
+  <div class="toast t-ok" id="inc-ok"></div>
+  <div class="toast t-err" id="inc-err"></div>
+</div>
+
+<!-- POSITIVE MOMENTS -->
+<div class="pg" id="pg-positive">
+  <h1 class="pg-title">Positive Moments</h1>
+  <p class="pg-sub">Log the good stuff. A balanced record is a credible record.</p>
+  <div class="card">
+    <div class="logger-row">
+      <span>Logging as</span>
+      <select id="pos-logger" onchange="setLogger(this.value)"><option value="Haley">Haley</option><option value="Dave">Dave</option></select>
+      <small>remembered on this device</small>
+    </div>
+    <div class="fg">
+      <div class="fg1">
+        <label class="fgl">Date & Time</label>
+        <input type="datetime-local" id="pos-date"/>
+      </div>
+      <div class="fg1">
+        <label class="fgl">Which Kid(s)?</label>
+        <div class="kids-row">
+          <div class="kchip" id="pok-Landon" onclick="toggleKid('pos','Landon')">Landon</div>
+          <div class="kchip" id="pok-Luke" onclick="toggleKid('pos','Luke')">Luke</div>
+          <div class="kchip" id="pok-Leo" onclick="toggleKid('pos','Leo')">Leo</div>
+          <div class="kchip" id="pok-All" onclick="toggleKid('pos','All')">All three</div>
+        </div>
+      </div>
+      <div class="fg1 full">
+        <label class="fgl">What happened?</label>
+        <textarea id="pos-body" placeholder="A good moment, a breakthrough, something that made you proud..."></textarea>
+      </div>
+      <div class="fg1 full">
+        <label class="fgl">Direct Quote (if any)</label>
+        <textarea id="pos-quote" style="min-height:58px;" placeholder='e.g. Leo said: "I feel safe here."'></textarea>
+      </div>
+    </div>
+    <div class="ct" style="margin-top:12px;">Tags</div>
+    <div class="tags-wrap" id="pos-tags"></div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn" onclick="clearPositive()">Clear</button>
+      <button class="btn btn-p" onclick="savePositive()">Save Moment</button>
+    </div>
+    <div class="toast t-ok" id="pos-ok"></div>
+    <div class="toast t-err" id="pos-err"></div>
+  </div>
+</div>
+
+<!-- VIEW LOG -->
+<div class="pg" id="pg-viewlog">
+  <h1 class="pg-title">View Log</h1>
+  <p class="pg-sub">All entries across all pages, newest first.</p>
+  <div class="filter-bar">
+    <button class="fpill active" onclick="setFilter('all',this)">All</button>
+    <button class="fpill" onclick="setFilter('incident',this)">Incidents</button>
+    <button class="fpill" onclick="setFilter('positive',this)">Positive</button>
+    <button class="fpill" onclick="setFilter('reflection',this)">Reflections</button>
+    <button class="fpill" onclick="setFilter('Landon',this)">Landon</button>
+    <button class="fpill" onclick="setFilter('Luke',this)">Luke</button>
+    <button class="fpill" onclick="setFilter('Leo',this)">Leo</button>
+    <button class="fpill" onclick="setFilter('flagged',this)">Flagged</button>
+    <button class="fpill" onclick="setFilter('Haley',this)">By Haley</button>
+    <button class="fpill" onclick="setFilter('Dave',this)">By Dave</button>
+  </div>
+  <div id="entries-list"><div class="empty">Loading...</div></div>
+</div>
+
+<!-- SUMMARY -->
+<div class="pg" id="pg-summary">
+  <h1 class="pg-title">Summary & Export</h1>
+  <p class="pg-sub">Overview of your documentation. Export anytime for your attorney.</p>
+  <div class="stats-row">
+    <div class="sbox"><div class="slbl">Total Entries</div><div class="snum" id="s-total">—</div></div>
+    <div class="sbox"><div class="slbl">Incidents</div><div class="snum" id="s-inc">—</div></div>
+    <div class="sbox"><div class="slbl">Positive</div><div class="snum" id="s-pos">—</div></div>
+    <div class="sbox"><div class="slbl">Flagged</div><div class="snum" id="s-flag">—</div></div>
+  </div>
+  <div class="export-card">
+    <h3>Export for Attorney</h3>
+    <p>Organized by best-interest factor. Flagged entries surface first. Copy and paste into a doc for your attorney.</p>
+    <button class="btn btn-p" onclick="genExport()">Generate Export</button>
+    <textarea class="exp-ta" id="exp-text" style="display:none;"></textarea>
+    <div style="font-size:11px;color:var(--text3);margin-top:5px;display:none;" id="copy-hint">Select all (Ctrl/Cmd+A) then copy (Ctrl/Cmd+C)</div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="pg" id="pg-settings">
+  <h1 class="pg-title">Settings</h1>
+  <p class="pg-sub">Manage tags, feelings, and check-in items.</p>
+
+  <div class="card">
+    <div class="set-title">Tags & Labels</div>
+    <div class="set-sub">Used on Incident Capture and Positive Moments.</div>
+    <div class="set-list" id="tag-set-list"></div>
+    <div class="set-add-row">
+      <input type="text" id="new-tag-name" placeholder="Tag name..."/>
+      <select id="new-tag-type">
+        <option value="general">General</option>
+        <option value="coparent">Co-parent</option>
+        <option value="preference">Preference</option>
+        <option value="positive">Positive</option>
+      </select>
+      <button class="btn btn-sm btn-p" onclick="addTag()">Add</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="set-title">Feelings List</div>
+    <div class="set-sub">Shown during the Daily Reflection when Mary contact is logged.</div>
+    <div class="set-list" id="feelings-set-list"></div>
+    <div class="set-add-row">
+      <input type="text" id="new-feeling" placeholder="Add a feeling..."/>
+      <button class="btn btn-sm btn-p" onclick="addFeeling()">Add</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="set-title">Check-In Items</div>
+    <div class="set-sub">Shown on the dashboard. Highlight overdue items from yesterday's reflection.</div>
+    <div class="set-list" id="ci-set-list"></div>
+    <div class="set-add-row">
+      <input type="text" id="new-ci-name" placeholder="Topic or item..."/>
+      <select id="new-ci-freq">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="biweekly">Biweekly</option>
+        <option value="monthly">Monthly</option>
+        <option value="once">One-time</option>
+      </select>
+      <input type="text" id="new-ci-who" placeholder="Who (e.g. Haley)" style="max-width:120px;"/>
+      <button class="btn btn-sm btn-p" onclick="addCheckIn()">Add</button>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+
+<script src="script.js"></script>
+</body>
+</html>
