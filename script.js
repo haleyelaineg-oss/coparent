@@ -631,26 +631,35 @@ function updateHint() {
 }
 
 function toggleKid(prefix, kid) {
-  var arr = prefix === 'inc' ? incKids : posKids;
   var pre = prefix === 'inc' ? 'ick-' : 'pok-';
+  var current = prefix === 'inc' ? incKids : posKids;
+
   if (kid === 'All') {
-    if (prefix === 'inc') incKids = arr.includes('All') ? [] : ['All'];
-    else posKids = arr.includes('All') ? [] : ['All'];
+    var isAll = current.includes('All');
+    if (prefix === 'inc') incKids = isAll ? [] : ['All'];
+    else posKids = isAll ? [] : ['All'];
     ['Landon', 'Luke', 'Leo', 'Haley', 'Dave'].forEach(function (k) {
       var el = document.getElementById(pre + k);
       if (el) el.classList.remove('on');
     });
   } else {
-    if (prefix === 'inc') incKids = incKids.filter(function (k) { return k !== 'All'; });
-    else posKids = posKids.filter(function (k) { return k !== 'All'; });
-    document.getElementById(pre + 'All').classList.remove('on');
-    if (arr.includes(kid)) arr.splice(arr.indexOf(kid), 1);
-    else arr.push(kid);
+    if (prefix === 'inc') {
+      incKids = incKids.filter(function (k) { return k !== 'All'; });
+      if (incKids.includes(kid)) incKids = incKids.filter(function (k) { return k !== kid; });
+      else incKids.push(kid);
+    } else {
+      posKids = posKids.filter(function (k) { return k !== 'All'; });
+      if (posKids.includes(kid)) posKids = posKids.filter(function (k) { return k !== kid; });
+      else posKids.push(kid);
+    }
+    var allEl = document.getElementById(pre + 'All');
+    if (allEl) allEl.classList.remove('on');
   }
-  var a2 = prefix === 'inc' ? incKids : posKids;
+
+  var updated = prefix === 'inc' ? incKids : posKids;
   ['Landon', 'Luke', 'Leo', 'All', 'Haley', 'Dave'].forEach(function (k) {
     var el = document.getElementById(pre + k);
-    if (el) el.classList.toggle('on', a2.includes(k));
+    if (el) el.classList.toggle('on', updated.includes(k));
   });
 }
 
