@@ -152,6 +152,58 @@ function getLoggerName(email) {
   return email.split('@')[0];
 }
 
+// Login with Password
+var passwordMode = false;
+
+function togglePasswordMode() {
+  passwordMode = !passwordMode;
+  var pwSection = document.getElementById('password-section');
+  var pwBtn = document.getElementById('signin-password-btn');
+  var toggleBtn = document.getElementById('password-toggle-btn');
+  var magicBtn = document.getElementById('login-btn');
+
+  if (passwordMode) {
+    pwSection.style.display = 'block';
+    pwBtn.style.display = 'block';
+    toggleBtn.textContent = 'Use Magic Link';
+    magicBtn.style.display = 'none';
+    document.getElementById('login-password').focus();
+  } else {
+    pwSection.style.display = 'none';
+    pwBtn.style.display = 'none';
+    toggleBtn.textContent = 'Use Password';
+    magicBtn.style.display = 'block';
+  }
+  document.getElementById('login-err').textContent = '';
+}
+
+async function signInWithPassword() {
+  var email = document.getElementById('login-email').value.trim().toLowerCase();
+  var password = document.getElementById('login-password').value;
+  var err = document.getElementById('login-err');
+  err.textContent = '';
+
+  if (!email) { err.textContent = 'Please enter your email address.'; return; }
+  if (!password) { err.textContent = 'Please enter your password.'; return; }
+  if (!ALLOWED_EMAILS.map(function(e){ return e.toLowerCase(); }).includes(email)) {
+    err.textContent = 'That email isn\'t authorized to access this app.';
+    return;
+  }
+
+  var btn = document.getElementById('signin-password-btn');
+  btn.textContent = 'Signing in...';
+  btn.disabled = true;
+
+  var { data, error } = await sb.auth.signInWithPassword({ email: email, password: password });
+
+  if (error) {
+    err.textContent = 'Error: ' + error.message;
+    btn.textContent = 'Sign In';
+    btn.disabled = false;
+  }
+  // onAuthStateChange handles the rest if successful
+}
+
 // ── INIT AUTH ─────────────────────────────────────────────────────────────────
 async function initAuth() {
   // Check for existing session
