@@ -238,12 +238,15 @@
       </div>
       <div class="fg1">
         <label class="fgl">Which Kid(s)?</label>
-        <div class="kids-row">
-          <div class="kchip" id="ick-Landon" onclick="toggleKid('inc','Landon')">Landon</div>
-          <div class="kchip" id="ick-Luke" onclick="toggleKid('inc','Luke')">Luke</div>
-          <div class="kchip" id="ick-Leo" onclick="toggleKid('inc','Leo')">Leo</div>
-          <div class="kchip" id="ick-All" onclick="toggleKid('inc','All')">All three</div>
-        </div>
+<label class="fgl">Who Was Involved?</label>
+<div class="kids-row">
+  <div class="kchip" id="ick-Landon" onclick="toggleKid('inc','Landon')">Landon</div>
+  <div class="kchip" id="ick-Luke" onclick="toggleKid('inc','Luke')">Luke</div>
+  <div class="kchip" id="ick-Leo" onclick="toggleKid('inc','Leo')">Leo</div>
+  <div class="kchip" id="ick-All" onclick="toggleKid('inc','All')">All three</div>
+  <div class="kchip" id="ick-Haley" onclick="toggleKid('inc','Haley')">Haley</div>
+  <div class="kchip" id="ick-Dave" onclick="toggleKid('inc','Dave')">Dave</div>
+</div>
       </div>
       <div class="fg1 full">
         <label class="fgl">Best-Interest Factor (MCL 722.23)</label>
@@ -274,7 +277,7 @@
         <textarea id="inc-incident" placeholder="Describe objectively — setting, who was present, exactly what was said or done, visible emotional responses."></textarea>
       </div>
       <div class="fg1 full">
-        <label class="fgl">Direct Quote from a Child (if any)</label>
+        <label class="fgl">Direct Quote (if any)</label>
         <textarea id="inc-quote" style="min-height:58px;" placeholder='e.g. Luke said unprompted: "I want to live here 80% of the time."'></textarea>
       </div>
       <div class="fg1 full">
@@ -307,16 +310,7 @@
     </div>
     <div class="att-list" id="inc-att-list"></div>
   </div>
-  <div class="card">
-    <div class="ct">Flag This Entry</div>
-    <div class="tog-row" id="tog-flagged" onclick="togFlag()" style="display:flex;align-items:center;justify-content:space-between;padding:10px 13px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:background .15s;">
-      <div>
-        <div style="font-size:14px;font-weight:500;color:var(--text);">Flag for Motion Narrative</div>
-        <div style="font-size:11px;color:var(--text3);">Highlight this in the custody motion</div>
-      </div>
-      <div id="flag-sw" style="width:36px;height:20px;background:var(--surface3);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;"><div style="position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15);"></div></div>
-    </div>
-  </div>
+  
   <div class="btn-row">
     <button class="btn" onclick="clearIncident()">Clear</button>
     <button class="btn btn-p" onclick="saveIncident()">Save Incident</button>
@@ -327,7 +321,7 @@
 
 <!-- POSITIVE MOMENTS -->
 <div class="pg" id="pg-positive">
-  <h1 class="pg-title">Positive Moments</h1>
+  <h1 class="pg-title">Memories & Positive Moments</h1>
   <p class="pg-sub">Log the good stuff. A balanced record is a credible record.</p>
   <div class="card">
     <div class="logger-row">
@@ -341,13 +335,15 @@
         <input type="datetime-local" id="pos-date"/>
       </div>
       <div class="fg1">
-        <label class="fgl">Which Kid(s)?</label>
-        <div class="kids-row">
-          <div class="kchip" id="pok-Landon" onclick="toggleKid('pos','Landon')">Landon</div>
-          <div class="kchip" id="pok-Luke" onclick="toggleKid('pos','Luke')">Luke</div>
-          <div class="kchip" id="pok-Leo" onclick="toggleKid('pos','Leo')">Leo</div>
-          <div class="kchip" id="pok-All" onclick="toggleKid('pos','All')">All three</div>
-        </div>
+<label class="fgl">Who Was Involved?</label>
+<div class="kids-row">
+  <div class="kchip" id="ick-Landon" onclick="toggleKid('inc','Landon')">Landon</div>
+  <div class="kchip" id="ick-Luke" onclick="toggleKid('inc','Luke')">Luke</div>
+  <div class="kchip" id="ick-Leo" onclick="toggleKid('inc','Leo')">Leo</div>
+  <div class="kchip" id="ick-All" onclick="toggleKid('inc','All')">All three</div>
+  <div class="kchip" id="ick-Haley" onclick="toggleKid('inc','Haley')">Haley</div>
+  <div class="kchip" id="ick-Dave" onclick="toggleKid('inc','Dave')">Dave</div>
+</div>
       </div>
       <div class="fg1 full">
         <label class="fgl">What happened?</label>
@@ -358,8 +354,6 @@
         <textarea id="pos-quote" style="min-height:58px;" placeholder='e.g. Leo said: "I feel safe here."'></textarea>
       </div>
     </div>
-    <div class="ct" style="margin-top:12px;">Tags</div>
-    <div class="tags-wrap" id="pos-tags"></div>
     <div class="btn-row" style="margin-top:14px;">
       <button class="btn" onclick="clearPositive()">Clear</button>
       <button class="btn btn-p" onclick="savePositive()">Save Moment</button>

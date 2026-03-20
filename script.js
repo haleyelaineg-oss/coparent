@@ -584,7 +584,10 @@ function toggleKid(prefix, kid) {
   if (kid === 'All') {
     if (prefix === 'inc') incKids = arr.includes('All') ? [] : ['All'];
     else posKids = arr.includes('All') ? [] : ['All'];
-    ['Landon', 'Luke', 'Leo'].forEach(function (k) { document.getElementById(pre + k).classList.remove('on'); });
+    ['Landon', 'Luke', 'Leo', 'Haley', 'Dave'].forEach(function (k) {
+      var el = document.getElementById(pre + k);
+      if (el) el.classList.remove('on');
+    });
   } else {
     if (prefix === 'inc') incKids = incKids.filter(function (k) { return k !== 'All'; });
     else posKids = posKids.filter(function (k) { return k !== 'All'; });
@@ -593,8 +596,9 @@ function toggleKid(prefix, kid) {
     else arr.push(kid);
   }
   var a2 = prefix === 'inc' ? incKids : posKids;
-  ['Landon', 'Luke', 'Leo', 'All'].forEach(function (k) {
-    document.getElementById(pre + k).classList.toggle('on', a2.includes(k));
+  ['Landon', 'Luke', 'Leo', 'All', 'Haley', 'Dave'].forEach(function (k) {
+    var el = document.getElementById(pre + k);
+    if (el) el.classList.toggle('on', a2.includes(k));
   });
 }
 
