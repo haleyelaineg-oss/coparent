@@ -11,7 +11,7 @@
 <body>
 
 <header class="hdr">
-  <div class="logo">Co<span>Parent</span></div>
+  <div class="logo">CoParent</div>
   <div style="margin-left:auto;display:flex;align-items:center;gap:12px;"><span style="font-size:13px;color:rgba(255,255,255,.7);" id="hdr-user"></span><button onclick="signOut()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;font-family:Jost,sans-serif;font-size:13px;padding:5px 14px;border-radius:20px;cursor:pointer;">Sign out</button></div>
 </header>
 
@@ -258,6 +258,7 @@
       <div class="fg1">
       <label class="fgl">Who Was Involved?</label>
 <div class="kids-row">
+  <div class="kchip" id="ick-Mary" onclick="toggleKid('inc','Mary')">Mary</div>
   <div class="kchip" id="ick-Landon" onclick="toggleKid('inc','Landon')">Landon</div>
   <div class="kchip" id="ick-Luke" onclick="toggleKid('inc','Luke')">Luke</div>
   <div class="kchip" id="ick-Leo" onclick="toggleKid('inc','Leo')">Leo</div>
@@ -295,7 +296,7 @@
         <textarea id="inc-incident" placeholder="Describe objectively — setting, who was present, exactly what was said or done, visible emotional responses."></textarea>
       </div>
       <div class="fg1 full">
-        <label class="fgl">Direct Quote (if any)</label>
+        <label class="fgl">Direct Quotes (if any)</label>
         <textarea id="inc-quote" style="min-height:58px;" placeholder='e.g. Luke said unprompted: "I want to live here 80% of the time."'></textarea>
       </div>
       <div class="fg1 full">
@@ -393,7 +394,6 @@
     <button class="fpill" onclick="setFilter('Landon',this)">Landon</button>
     <button class="fpill" onclick="setFilter('Luke',this)">Luke</button>
     <button class="fpill" onclick="setFilter('Leo',this)">Leo</button>
-    <button class="fpill" onclick="setFilter('flagged',this)">Flagged</button>
     <button class="fpill" onclick="setFilter('Haley',this)">By Haley</button>
     <button class="fpill" onclick="setFilter('Dave',this)">By Dave</button>
   </div>
