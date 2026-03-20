@@ -602,12 +602,11 @@ function clearIncident() {
   document.getElementById('inc-factor').value = '';
   document.getElementById('inc-hint').textContent = '';
   incKids = []; incAtts = []; incSelectedTags = []; distressVal = 0; flagged = false;
-  ['Landon', 'Luke', 'Leo', 'All'].forEach(function (k) { document.getElementById('ick-' + k).classList.remove('on'); });
+ ['Landon', 'Luke', 'Leo', 'All', 'Haley', 'Dave'].forEach(function (k) {
+  var el = document.getElementById('ick-' + k);
+  if (el) el.classList.remove('on');
+});
   document.querySelectorAll('#inc-distress .lk-btn').forEach(function (b) { b.className = 'lk-btn'; });
-  var sw = document.getElementById('flag-sw');
-  sw.style.background = 'var(--surface3)';
-  sw.querySelector('div').style.transform = '';
-  document.getElementById('tog-flagged').style.background = '';
   renderAtts('inc');
   renderTagButtons('inc');
 }
@@ -615,7 +614,10 @@ function clearIncident() {
 function clearPositive() {
   ['pos-body', 'pos-quote'].forEach(function (id) { document.getElementById(id).value = ''; });
   posKids = []; posAtts = []; posSelectedTags = [];
-  ['Landon', 'Luke', 'Leo', 'All'].forEach(function (k) { document.getElementById('pok-' + k).classList.remove('on'); });
+ ['Landon', 'Luke', 'Leo', 'All'].forEach(function (k) {
+  var el = document.getElementById('pok-' + k);
+  if (el) el.classList.remove('on');
+});
   renderAtts('pos');
   renderTagButtons('pos');
 }
