@@ -176,7 +176,7 @@
 
     <!-- STEP 5: Mary -->
     <div class="flow-step" id="step-5">
-      <div class="flow-q">Any communication with Mary today?</div>
+      <div class="flow-q">Any communication or interaction with Mary today?</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:.5rem;">
         <button class="btn btn-p" onclick="setMaryContact(true)">Yes</button>
         <button class="btn" onclick="setMaryContact(false)">No</button>
@@ -195,6 +195,16 @@
           <button class="lk-btn" onclick="setMaryLikert(3,this)">3<br><span style="font-size:10px;font-weight:400">Tense</span></button>
           <button class="lk-btn" onclick="setMaryLikert(4,this)">4<br><span style="font-size:10px;font-weight:400">Difficult</span></button>
           <button class="lk-btn" onclick="setMaryLikert(5,this)">5<br><span style="font-size:10px;font-weight:400">Distressing</span></button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct">How Did She Treat the Kids?</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="mary-kids-treatment">
+          <div class="kchip" onclick="setMaryKidsTreatment('Warm', this)">Warm</div>
+          <div class="kchip" onclick="setMaryKidsTreatment('Neutral', this)">Neutral</div>
+          <div class="kchip" onclick="setMaryKidsTreatment('Dismissive', this)">Dismissive</div>
+          <div class="kchip" onclick="setMaryKidsTreatment('Cold', this)">Cold</div>
+          <div class="kchip" onclick="setMaryKidsTreatment('Not present', this)">Not present</div>
         </div>
       </div>
       <div class="card">

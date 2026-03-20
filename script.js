@@ -85,6 +85,7 @@ var flowStruggles = {};
 var flowPositives = {};
 var FLOW_STEPS_KIDS = [0, 1, 2, 3, 4, 5, 6, 7];
 var FLOW_STEPS_NOKIDS = [0, 1, 5, 6, 7];
+var flowMaryKidsTreatment = '';
 
 // ── LOCAL SETTINGS ────────────────────────────────────────────────────────────
 // Non-sensitive UI prefs only (tags, feelings, check-ins, logger name)
@@ -314,6 +315,7 @@ function initFlow() {
   flowMaryContact = false;
   flowMaryLikert = 0;
   flowSelectedFeelings = [];
+  flowMaryKidsTreatment = '';
   flowMoods = {};
   flowStruggles = {};
   flowPositives = {};
@@ -385,6 +387,14 @@ function renderFeelings() {
   el.innerHTML = feelings.map(function (f) {
     return '<div class="feeling-btn' + (flowSelectedFeelings.includes(f) ? ' on' : '') + '" onclick="toggleFeeling(\'' + f.replace(/'/g, "\\'") + '\')">' + f + '</div>';
   }).join('');
+}
+
+function setMaryKidsTreatment(val, el) {
+  flowMaryKidsTreatment = val;
+  document.querySelectorAll('#mary-kids-treatment .kchip').forEach(function (c) {
+    c.classList.remove('on');
+  });
+  el.classList.add('on');
 }
 
 function toggleFeeling(f) {
@@ -477,6 +487,7 @@ function buildReviewSummary() {
   if (flowMaryContact) {
     html += '<div style="font-size:14px;color:var(--text);">Yes — ' + maryLikertLabel(flowMaryLikert) + (flowSelectedFeelings.length ? ' · ' + flowSelectedFeelings.join(', ') : '') + '</div>';
     var mn = document.getElementById('mary-notes');
+    if (flowMaryKidsTreatment) html += '<div style="font-size:14px;color:var(--text);">Kids treatment: ' + flowMaryKidsTreatment + '</div>';
     if (mn && mn.value.trim()) html += '<div style="font-size:13px;color:var(--text2);margin-top:4px;font-style:italic;">' + mn.value.trim() + '</div>';
   } else {
     html += '<div style="font-size:14px;color:var(--text);">No contact today</div>';
@@ -501,6 +512,7 @@ async function saveReflection() {
     mary_contact: flowMaryContact,
     mary_likert: flowMaryContact ? flowMaryLikert : null,
     mary_feelings: flowMaryContact ? flowSelectedFeelings : [],
+    mary_kids_treatment: flowMaryContact ? flowMaryKidsTreatment : '',
     mary_notes: flowMaryContact ? maryNotes : '',
     flagged: false,
     tags: [],
@@ -545,7 +557,7 @@ async function saveIncident() {
 async function savePositive() {
   var body = document.getElementById('pos-body').value.trim();
   if (!body) { showToast('pos', 'err', 'Please describe the moment.'); return; }
-  if (!posKids.length) { showToast('pos', 'err', 'Please select which kid(s).'); return; }
+  if (!posKids.length) { showToast('pos', 'err', 'Please select F(s).'); return; }
 
   var entry = {
     entry_type: 'positive',
