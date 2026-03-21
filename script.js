@@ -1,109 +1,50 @@
-// ── SUPABASE CLIENT INIT ──────────────────────────────────────────────────────
-var SUPABASE_URL = 'https://cjomxvxopnjmqfxaqeiu.supabase.co';
-var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqb214dnhvcG5qbXFmeGFxZWl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NTg2MTUsImV4cCI6MjA4OTQzNDYxNX0.qN2JPCotyAJpcosg2TKlsM4eXHUrbmeTJtQaAGHKwF0';
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
-var ALLOWED_EMAILS = [
-  'haleyelaineg@gmail.com',
-  'davidvincent2007@gmail.com',
-  'admin@hd-enterprises.us',
-];
-
-// ── DEFAULTS ──────────────────────────────────────────────────────────────────
-var DEFAULT_TAGS = [
-  { id: 't1', name: 'Preference expressed', type: 'preference' },
-  { id: 't2', name: 'Co-parent issue', type: 'coparent' },
-  { id: 't3', name: 'Boundary violation', type: 'coparent' },
-  { id: 't4', name: 'Emotional distress', type: 'general' },
-  { id: 't5', name: 'School related', type: 'general' },
-  { id: 't6', name: 'Dismissive behavior', type: 'coparent' },
-  { id: 't7', name: 'Withholding information', type: 'coparent' },
-  { id: 't8', name: 'Communication failure', type: 'coparent' },
-  { id: 't9', name: 'Unprompted statement', type: 'preference' },
-  { id: 't10', name: 'Bedtime issue', type: 'general' },
-  { id: 't11', name: 'Pickup/dropoff issue', type: 'coparent' },
-  { id: 't12', name: 'Positive moment', type: 'positive' },
-];
-
-var DEFAULT_FEELINGS = [
-  'Frustrated', 'Anxious', 'Dismissed', 'Disrespected', 'Hopeful',
-  'Relieved', 'Angry', 'Sad', 'Confused', 'Calm', 'Exhausted',
-  'Overwhelmed', 'Validated', 'Drained',
-];
-
-var DEFAULT_CHECKINS = [
-  { id: 'ci1', name: 'Homework check — boys', freq: 'daily', who: 'Haley & Dave' },
-  { id: 'ci2', name: 'Follow up with school', freq: 'weekly', who: 'Haley' },
-  { id: 'ci3', name: 'Attorney update', freq: 'monthly', who: 'Haley & Dave' },
-];
-
-var KIDS = ['Landon', 'Luke', 'Leo'];
-
-var MOODS = [
-  { emoji: '😄', label: 'Happy' },
-  { emoji: '😔', label: 'Sad' },
-  { emoji: '😴', label: 'Tired' },
-  { emoji: '🤒', label: 'Sick' },
-  { emoji: '😤', label: 'Angry' },
-  { emoji: '😰', label: 'Anxious' },
-  { emoji: '😐', label: 'Okay' },
-];
-
-var FACTOR_HINTS = {
-  '(A) Emotional bond': 'Document the boys seeking comfort, expressing love, emotional regulation in your care.',
-  '(B) Guidance & education': 'Homework involvement, school conferences, discipline approach.',
-  '(C) Material & medical needs': 'Medical appointments, clothing, food, childcare.',
-  '(D) Stable environment': 'Housing stability, consistent routines, school continuity.',
-  '(E) Permanence of home': 'Who lives in each home, stability of family unit.',
-  '(F) Moral fitness': 'CPS involvement, criminal history, substance use.',
-  '(G) Mental & physical health': 'Conditions impacting ability to parent. Therapy.',
-  "(I) Child's preference": 'Unprompted statements only — never ask directly.',
-  '(J) Co-parenting cooperation': 'Ignored messages, schedule violations, criticism in front of kids.',
-  '(K) Domestic violence': 'Emotional invalidation, verbal abuse, dismissiveness, control.',
-  '(L) Other relevant factor': "Anything relevant that doesn't fit above.",
-};
 
 // ── AUTH STATE ────────────────────────────────────────────────────────────────
 var currentUser = null;
+var passwordMode = false;
 
 // ── APP STATE ─────────────────────────────────────────────────────────────────
 var allEntries = [];
 var currentFilter = 'all';
-var incKids = [], posKids = [];
-var distressVal = 0, flagged = false;
-var incAtts = [], posAtts = [];
-var incSelectedTags = [], posSelectedTags = [];
+var currentPersonFilter = null;
+var expCats = ['kids', 'parenting', 'coparenting', 'reflection'];
 
-// Flow state
+// Capture form state
+var capPeople = [];
+var capSource = '';
+var capCategory = '';
+var capSeverity = 0;
+var capAtts = [];
+
+// Daily reflection state
 var flowStep = 0;
 var flowKidsHome = true;
 var flowMaryContact = false;
 var flowMaryLikert = 0;
-var flowSelectedFeelings = [];
+var flowMaryTreatment = '';
+var flowFeelings = [];
 var flowMoods = {};
 var flowStruggles = {};
 var flowPositives = {};
 var FLOW_STEPS_KIDS = [0, 1, 2, 3, 4, 5, 6, 7];
 var FLOW_STEPS_NOKIDS = [0, 1, 5, 6, 7];
-var flowMaryKidsTreatment = '';
 
-// ── LOCAL SETTINGS ────────────────────────────────────────────────────────────
-// Non-sensitive UI prefs only (tags, feelings, check-ins, logger name)
+// ── LOCAL STORAGE ─────────────────────────────────────────────────────────────
 function ls(k, v) {
   if (v === undefined) return JSON.parse(localStorage.getItem(k) || 'null');
   localStorage.setItem(k, JSON.stringify(v));
 }
-
-function getTags() { return ls('tags') || DEFAULT_TAGS; }
-function getFeelings() { return ls('feelings') || DEFAULT_FEELINGS; }
-function getCheckIns() { return ls('checkins') || DEFAULT_CHECKINS; }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function showScreen(id) {
   ['screen-login', 'screen-check-email', 'screen-app'].forEach(function (s) {
     document.getElementById(s).style.display = 'none';
   });
-  document.getElementById(id).style.display = 'flex';
+  document.getElementById(id).style.display = id === 'screen-app' ? 'flex' : 'flex';
+  if (id === 'screen-app') document.getElementById(id).style.flexDirection = 'column';
 }
 
 async function sendMagicLink() {
@@ -111,23 +52,17 @@ async function sendMagicLink() {
   var btn = document.getElementById('login-btn');
   var err = document.getElementById('login-err');
   err.textContent = '';
-
   if (!email) { err.textContent = 'Please enter your email address.'; return; }
-  if (!ALLOWED_EMAILS.map(function(e){ return e.toLowerCase(); }).includes(email)) {
+  if (!ALLOWED_EMAILS.map(function (e) { return e.toLowerCase(); }).includes(email)) {
     err.textContent = 'That email isn\'t authorized to access this app.';
     return;
   }
-
   btn.textContent = 'Sending...';
   btn.disabled = true;
-
   var { error } = await sb.auth.signInWithOtp({
     email: email,
-    options: {
-      emailRedirectTo: window.location.href,
-    },
+    options: { emailRedirectTo: window.location.href },
   });
-
   if (error) {
     err.textContent = 'Error: ' + error.message;
     btn.textContent = 'Send Magic Link';
@@ -138,31 +73,12 @@ async function sendMagicLink() {
   }
 }
 
-async function signOut() {
-  await sb.auth.signOut();
-  currentUser = null;
-  showScreen('screen-login');
-}
-
-function getLoggerName(email) {
-  if (!email) return 'Haley';
-  var lower = email.toLowerCase();
-  // Map email to display name
-  if (lower === ALLOWED_EMAILS[0].toLowerCase()) return 'Haley';
-  if (lower === ALLOWED_EMAILS[1].toLowerCase()) return 'Dave';
-  return email.split('@')[0];
-}
-
-// Login with Password
-var passwordMode = false;
-
 function togglePasswordMode() {
   passwordMode = !passwordMode;
   var pwSection = document.getElementById('password-section');
   var pwBtn = document.getElementById('signin-password-btn');
   var toggleBtn = document.getElementById('password-toggle-btn');
   var magicBtn = document.getElementById('login-btn');
-
   if (passwordMode) {
     pwSection.style.display = 'block';
     pwBtn.style.display = 'block';
@@ -183,71 +99,64 @@ async function signInWithPassword() {
   var password = document.getElementById('login-password').value;
   var err = document.getElementById('login-err');
   err.textContent = '';
-
   if (!email) { err.textContent = 'Please enter your email address.'; return; }
   if (!password) { err.textContent = 'Please enter your password.'; return; }
-  if (!ALLOWED_EMAILS.map(function(e){ return e.toLowerCase(); }).includes(email)) {
-    err.textContent = 'That email isn\'t authorized to access this app.';
+  if (!ALLOWED_EMAILS.map(function (e) { return e.toLowerCase(); }).includes(email)) {
+    err.textContent = 'That email isn\'t authorized.';
     return;
   }
-
   var btn = document.getElementById('signin-password-btn');
   btn.textContent = 'Signing in...';
   btn.disabled = true;
-
   var { data, error } = await sb.auth.signInWithPassword({ email: email, password: password });
-
   if (error) {
     err.textContent = 'Error: ' + error.message;
     btn.textContent = 'Sign In';
     btn.disabled = false;
   }
-  // onAuthStateChange handles the rest if successful
 }
 
-// ── INIT AUTH ─────────────────────────────────────────────────────────────────
+async function signOut() {
+  await sb.auth.signOut();
+  currentUser = null;
+  showScreen('screen-login');
+}
+
+function getLoggerName(email) {
+  if (!email) return 'Haley';
+  var lower = email.toLowerCase();
+  if (lower === ALLOWED_EMAILS[0].toLowerCase()) return 'Haley';
+  if (lower === ALLOWED_EMAILS[1].toLowerCase()) return 'Dave';
+  return email.split('@')[0];
+}
+
 async function initAuth() {
-  // Check for existing session
   var { data: { session } } = await sb.auth.getSession();
-
-  if (session) {
-    currentUser = session.user;
-    onAuthenticated();
-  } else {
-    showScreen('screen-login');
-  }
-
-  // Listen for auth state changes (handles magic link redirect)
+  if (session) { currentUser = session.user; onAuthenticated(); }
+  else showScreen('screen-login');
   sb.auth.onAuthStateChange(function (event, session) {
-    if (event === 'SIGNED_IN' && session) {
-      currentUser = session.user;
-      onAuthenticated();
-    } else if (event === 'SIGNED_OUT') {
-      currentUser = null;
-      showScreen('screen-login');
-    }
+    if (event === 'SIGNED_IN' && session) { currentUser = session.user; onAuthenticated(); }
+    else if (event === 'SIGNED_OUT') { currentUser = null; showScreen('screen-login'); }
   });
 }
 
 function onAuthenticated() {
   var name = getLoggerName(currentUser.email);
-  // Set the logger name based on who's logged in
   ls('logger', name);
-
-  // Show user info in header
   var el = document.getElementById('hdr-user');
   if (el) el.textContent = name;
-
   showScreen('screen-app');
+  loadTheme();
   loadLogger();
-  renderDashboard();
+  initCapturePage();
+  loadHabits().then(renderDashboard);
   loadEntries().then(updateCount);
 }
 
 // ── LOGGER ────────────────────────────────────────────────────────────────────
 function setLogger(v) {
   ls('logger', v);
-  ['ref-logger', 'inc-logger', 'pos-logger'].forEach(function (id) {
+  ['ref-logger', 'cap-logger', 'mem-logger'].forEach(function (id) {
     var el = document.getElementById(id);
     if (el) el.value = v;
   });
@@ -255,7 +164,7 @@ function setLogger(v) {
 
 function loadLogger() {
   var v = ls('logger') || 'Haley';
-  ['ref-logger', 'inc-logger', 'pos-logger'].forEach(function (id) {
+  ['ref-logger', 'cap-logger', 'mem-logger'].forEach(function (id) {
     var el = document.getElementById(id);
     if (el) el.value = v;
   });
@@ -267,62 +176,444 @@ function nav(page, btn) {
   document.querySelectorAll('.nb').forEach(function (b) { b.classList.remove('active'); });
   document.getElementById('pg-' + page).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (page === 'viewlog') loadEntries().then(renderEntries);
-  if (page === 'summary') loadEntries().then(renderSummary);
-  if (page === 'settings') renderSettings();
-  if (page === 'incident') { renderTagButtons('inc'); setNow('inc-date'); }
-  if (page === 'positive') { renderTagButtons('pos'); setNow('pos-date'); }
+  if (page === 'viewlog') { loadEntries().then(function () { renderFeed(); renderTrends(); }); }
+  if (page === 'export') loadEntries();
   if (page === 'reflection') initFlow();
   if (page === 'dashboard') renderDashboard();
+  if (page === 'capture') { setNow('cap-date'); loadLogger(); }
+  if (page === 'memories') initMemoriesPage();
+  if (page === 'manage-habits') initManageHabits();
+  if (page === 'settings') renderThemePicker();
+}
+
+// ── THEME ──────────────────────────────────────────────────────────────────────
+var THEMES = ['rose', 'sage', 'slate', 'amber', 'plum'];
+
+function applyTheme(name) {
+  document.body.className = name === 'rose' ? '' : 'theme-' + name;
+  ls('theme', name);
+  renderThemePicker();
+}
+
+function loadTheme() {
+  var saved = ls('theme') || 'rose';
+  applyTheme(saved);
+}
+
+function renderThemePicker() {
+  var current = ls('theme') || 'rose';
+  THEMES.forEach(function (t) {
+    var swatch = document.getElementById('swatch-' + t);
+    var check = document.getElementById('check-' + t);
+    if (swatch) swatch.classList.toggle('active', t === current);
+    if (check) check.textContent = t === current ? '✓' : '';
+  });
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
-function renderDashboard() {
+var habits = [];
+var habitsDoneToday = {};
+
+async function loadHabits() {
+  var { data, error } = await sb.from('habits').select('*').eq('active', true).order('created_at');
+  if (!error && data) habits = data;
+}
+
+async function renderDashboard() {
   var h = new Date().getHours();
   var name = ls('logger') || 'Haley';
-  var greet = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + ', ' + name + '.';
-  document.getElementById('dash-greeting').textContent = greet;
-  var opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-US', opts);
-  renderCheckInDash();
+  document.getElementById('dash-greeting').textContent =
+    (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + ', ' + name + '!';
+  document.getElementById('dash-date').textContent =
+    new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  renderHabits();
+  await Promise.all([loadHabits(), loadHabitsToday()]);
+  renderHabits();
 }
 
-function renderCheckInDash() {
-  var items = getCheckIns();
-  var el = document.getElementById('dash-checkins');
-  if (!items.length) {
-    el.innerHTML = '<div class="empty">No check-in items yet. Add them in Settings.</div>';
-    return;
-  }
+async function loadHabitsToday() {
   var today = new Date().toISOString().slice(0, 10);
-  var completed = ls('ci_completed') || {};
-  el.innerHTML = '<div class="ci-list">' + items.map(function (item) {
-    var doneToday = completed[item.id] === today;
-    var cls = 'ci-item' + (doneToday ? '' : ' overdue');
-    var meta = item.freq + (item.who ? ' · ' + item.who : '') + (doneToday ? ' · Done today' : ' · Not marked today');
-    return '<div class="' + cls + '">' +
-      '<div class="ci-dot"></div>' +
-      '<div class="ci-body"><div class="ci-name">' + item.name + '</div>' +
-      '<div class="ci-meta">' + meta + '</div></div>' +
-      '</div>';
-  }).join('') + '</div>';
+  var { data, error } = await sb.from('habit_logs').select('habit_id,kid').eq('completed_date', today);
+  if (error) return;
+  habitsDoneToday = {};
+  (data || []).forEach(function (row) { habitsDoneToday[row.habit_id + ':' + row.kid] = true; });
 }
 
-// ── FLOW ──────────────────────────────────────────────────────────────────────
+function renderHabits() {
+  var el = document.getElementById('dash-habits');
+  if (!habits.length) { el.innerHTML = '<div class="empty">No habits yet. <a href="#" onclick="nav(\'manage-habits\',null);return false;">Add one →</a></div>'; return; }
+  var totalKids = habits.reduce(function (sum, h) { return sum + (h.kids || []).length; }, 0);
+  var doneKids = Object.keys(habitsDoneToday).length;
+  el.innerHTML =
+    '<div class="habit-list">' +
+    habits.map(function (h) {
+      var kids = h.kids || [];
+      var escapedName = h.name.replace(/'/g, "\\'");
+      return '<div class="habit-item">' +
+        '<div class="habit-body">' +
+        '<div class="habit-name">' + h.name + '</div>' +
+        '<div class="habit-kids">' +
+        kids.map(function (kid) {
+          var done = !!habitsDoneToday[h.id + ':' + kid];
+          return '<div class="habit-kid' + (done ? ' done' : '') + '" onclick="toggleHabit(\'' + h.id + '\',\'' + escapedName + '\',\'' + kid + '\')">' +
+            (done ? '✓ ' : '○ ') + kid +
+            '</div>';
+        }).join('') +
+        '</div></div></div>';
+    }).join('') +
+    '</div>' +
+    '<div style="font-size:12px;color:var(--text3);margin-top:10px;">' + doneKids + ' of ' + totalKids + ' done today</div>';
+}
+
+async function toggleHabit(id, name, kid) {
+  var today = new Date().toISOString().slice(0, 10);
+  var key = id + ':' + kid;
+  if (habitsDoneToday[key]) {
+    await sb.from('habit_logs').delete().eq('habit_id', id).eq('kid', kid).eq('completed_date', today);
+    delete habitsDoneToday[key];
+  } else {
+    await sb.from('habit_logs').insert({
+      habit_id: id,
+      habit_name: name,
+      kid: kid,
+      completed_date: today,
+      logger: ls('logger') || 'Haley',
+      user_id: currentUser ? currentUser.id : null,
+    });
+    habitsDoneToday[key] = true;
+  }
+  renderHabits();
+}
+
+// ── MANAGE HABITS ─────────────────────────────────────────────────────────────
+var newHabitKids = [];
+
+function initManageHabits() {
+  newHabitKids = [];
+  document.getElementById('new-habit-name').value = '';
+  var el = document.getElementById('new-habit-kids');
+  el.innerHTML = KIDS.map(function (k) {
+    return '<div class="kchip" id="mhchip-' + k + '" onclick="toggleNewHabitKid(\'' + k + '\')">' + k + '</div>';
+  }).join('');
+  renderHabitsList();
+}
+
+function toggleNewHabitKid(kid) {
+  if (newHabitKids.includes(kid)) newHabitKids = newHabitKids.filter(function (k) { return k !== kid; });
+  else newHabitKids.push(kid);
+  KIDS.forEach(function (k) {
+    var el = document.getElementById('mhchip-' + k);
+    if (el) el.classList.toggle('on', newHabitKids.includes(k));
+  });
+}
+
+async function addHabit() {
+  var name = document.getElementById('new-habit-name').value.trim();
+  if (!name) { showToast('mh', 'err', 'Please enter a habit name.'); return; }
+  if (!newHabitKids.length) { showToast('mh', 'err', 'Please select at least one kid.'); return; }
+  var { data, error } = await sb.from('habits').insert({ name: name, kids: newHabitKids, active: true }).select();
+  if (error) { showToast('mh', 'err', 'Save failed: ' + error.message); return; }
+  habits.push(data[0]);
+  showToast('mh', 'ok', 'Habit added.');
+  document.getElementById('new-habit-name').value = '';
+  newHabitKids = [];
+  KIDS.forEach(function (k) {
+    var el = document.getElementById('mhchip-' + k);
+    if (el) el.classList.remove('on');
+  });
+  renderHabitsList();
+}
+
+async function removeHabit(id) {
+  var { error } = await sb.from('habits').update({ active: false }).eq('id', id);
+  if (error) { showToast('mh', 'err', 'Remove failed: ' + error.message); return; }
+  habits = habits.filter(function (h) { return h.id !== id; });
+  renderHabitsList();
+}
+
+function renderHabitsList() {
+  var el = document.getElementById('habits-manage-list');
+  if (!habits.length) { el.innerHTML = '<div class="empty">No habits yet.</div>'; return; }
+  el.innerHTML = habits.map(function (h) {
+    return '<div class="mh-item">' +
+      '<div class="mh-body">' +
+      '<div class="mh-name">' + h.name + '</div>' +
+      '<div class="mh-kids">' + (h.kids || []).join(', ') + '</div>' +
+      '</div>' +
+      '<button class="btn" onclick="removeHabit(\'' + h.id + '\')" style="flex-shrink:0;font-size:12px;padding:4px 10px;">Remove</button>' +
+      '</div>';
+  }).join('');
+}
+
+// ── CAPTURE PAGE INIT ─────────────────────────────────────────────────────────
+function initCapturePage() {
+  // Build location dropdown
+  var locSel = document.getElementById('cap-location');
+  locSel.innerHTML = '<option value="">Select location...</option>' +
+    LOCATIONS.map(function (l) { return '<option value="' + l.id + '">' + l.name + '</option>'; }).join('');
+
+  // Build category grid
+  var grid = document.getElementById('cat-grid');
+  grid.innerHTML = ENTRY_CATEGORIES.filter(function (cat) { return cat.id !== 'memories'; }).map(function (cat) {
+    return '<div class="cat-btn" id="catbtn-' + cat.id + '" onclick="selectCategory(\'' + cat.id + '\')" ' +
+      'style="--cat-color:' + cat.color + ';--cat-color-l:' + cat.colorL + ';">' +
+      '<div class="cat-name">' + cat.name + '</div>' +
+      '<div class="cat-desc">' + cat.description + '</div>' +
+      '</div>';
+  }).join('');
+
+  // Build people chips
+  var peopleEl = document.getElementById('cap-people');
+  peopleEl.innerHTML = ALL_PEOPLE.map(function (p) {
+    return '<div class="kchip" id="capchip-' + p + '" onclick="togglePerson(\'' + p + '\')">' + p + '</div>';
+  }).join('');
+
+  // Build source chips
+  var srcEl = document.getElementById('cap-source');
+  srcEl.innerHTML = INFO_SOURCES.map(function (s) {
+    return '<div class="kchip" id="srchip-' + s.id + '" onclick="selectSource(\'' + s.id + '\')">' + s.name + '</div>';
+  }).join('');
+
+  // Build severity buttons
+  var sevEl = document.getElementById('cap-severity');
+  sevEl.innerHTML = [1,2,3,4,5].map(function (n) {
+    return '<button class="sev-btn" id="sevbtn-' + n + '" onclick="setSeverity(' + n + ')">' + n + '</button>';
+  }).join('');
+}
+
+function selectCategory(id) {
+  capCategory = id;
+  document.querySelectorAll('.cat-btn').forEach(function (b) {
+    b.classList.remove('on');
+    b.style.borderColor = '';
+    b.style.background = '';
+  });
+  var cat = ENTRY_CATEGORIES.find(function (c) { return c.id === id; });
+  var btn = document.getElementById('catbtn-' + id);
+  btn.classList.add('on');
+  btn.style.borderColor = cat.color;
+  btn.style.background = cat.colorL;
+
+  // Populate type dropdown
+  var typeWrap = document.getElementById('type-wrap');
+  var typeSel = document.getElementById('cap-type');
+  typeWrap.style.display = 'flex';
+  typeSel.innerHTML = '<option value="">Select type...</option>' +
+    cat.types.map(function (t) { return '<option value="' + t.id + '">' + t.name + '</option>'; }).join('');
+
+  // Hide source card for memories
+  document.getElementById('source-card').style.display = id === 'memories' ? 'none' : 'block';
+  document.getElementById('severity-card').style.display = id === 'memories' ? 'none' : 'block';
+
+  // Set default severity when type changes
+  typeSel.onchange = function () {
+    var type = cat.types.find(function (t) { return t.id === typeSel.value; });
+    if (type) setSeverity(type.defaultSeverity);
+  };
+}
+
+function togglePerson(name) {
+  if (capPeople.includes(name)) capPeople = capPeople.filter(function (p) { return p !== name; });
+  else capPeople.push(name);
+  ALL_PEOPLE.forEach(function (p) {
+    var el = document.getElementById('capchip-' + p);
+    if (el) el.classList.toggle('on', capPeople.includes(p));
+  });
+}
+
+function selectSource(id) {
+  capSource = id;
+  INFO_SOURCES.forEach(function (s) {
+    var el = document.getElementById('srchip-' + s.id);
+    if (el) el.classList.toggle('on', s.id === id);
+  });
+}
+
+function setSeverity(n) {
+  capSeverity = n;
+  [1,2,3,4,5].forEach(function (i) {
+    var btn = document.getElementById('sevbtn-' + i);
+    if (btn) {
+      btn.className = 'sev-btn';
+      if (i <= n) btn.classList.add('on-' + n);
+    }
+  });
+  var hints = ['', 'Lowest severity — no concern', 'Low concern', 'Moderate', 'High concern', 'Highest severity — serious concern'];
+  document.getElementById('sev-hint').textContent = hints[n] || '';
+}
+
+function handleFiles(files) {
+  Array.from(files).forEach(function (f) {
+    capAtts.push({ name: f.name, size: (f.size / 1048576).toFixed(1) + ' MB', type: f.type });
+  });
+  renderAtts();
+  document.getElementById('cap-files').value = '';
+}
+
+function renderAtts() {
+  document.getElementById('cap-att-list').innerHTML = capAtts.map(function (a, i) {
+    return '<div class="att-item"><span class="att-name">' + a.name + '</span><span class="att-meta">' + a.size + '</span>' +
+      '<button class="att-rm" onclick="rmAtt(' + i + ')">×</button></div>';
+  }).join('');
+}
+
+function rmAtt(i) { capAtts.splice(i, 1); renderAtts(); }
+
+function clearCapture() {
+  capPeople = []; capSource = ''; capCategory = ''; capSeverity = 0; capAtts = [];
+  document.getElementById('cap-facts').value = '';
+  document.getElementById('cap-assessment').value = '';
+  document.getElementById('cap-quote').value = '';
+  document.getElementById('cap-witnesses').value = '';
+  document.getElementById('cap-location').value = '';
+  document.getElementById('cap-type').innerHTML = '';
+  document.getElementById('type-wrap').style.display = 'none';
+  document.querySelectorAll('.cat-btn').forEach(function (b) { b.classList.remove('on'); b.style.borderColor = ''; b.style.background = ''; });
+  ALL_PEOPLE.forEach(function (p) { var el = document.getElementById('capchip-' + p); if (el) el.classList.remove('on'); });
+  INFO_SOURCES.forEach(function (s) { var el = document.getElementById('srchip-' + s.id); if (el) el.classList.remove('on'); });
+  [1,2,3,4,5].forEach(function (i) { var btn = document.getElementById('sevbtn-' + i); if (btn) btn.className = 'sev-btn'; });
+  document.getElementById('sev-hint').textContent = '';
+  document.getElementById('source-card').style.display = 'block';
+  document.getElementById('severity-card').style.display = 'block';
+  renderAtts();
+  setNow('cap-date');
+}
+
+// ── SAVE ENTRY ────────────────────────────────────────────────────────────────
+async function saveEntry() {
+  var facts = document.getElementById('cap-facts').value.trim();
+  var category = capCategory;
+  var type = document.getElementById('cap-type') ? document.getElementById('cap-type').value : '';
+
+  if (!facts) { showToast('cap', 'err', 'Please describe what happened in the Facts field.'); return; }
+  if (!category) { showToast('cap', 'err', 'Please select a category.'); return; }
+  if (!type) { showToast('cap', 'err', 'Please select a type.'); return; }
+  if (!capPeople.length) { showToast('cap', 'err', 'Please select who was involved.'); return; }
+
+  var locId = document.getElementById('cap-location').value;
+  var loc = LOCATIONS.find(function (l) { return l.id === locId; });
+  var srcObj = INFO_SOURCES.find(function (s) { return s.id === capSource; });
+  var cat = ENTRY_CATEGORIES.find(function (c) { return c.id === category; });
+  var typeObj = cat ? cat.types.find(function (t) { return t.id === type; }) : null;
+
+  var entry = {
+    entry_type: 'capture',
+    category: category,
+    type: type,
+    type_name: typeObj ? typeObj.name : type,
+    category_name: cat ? cat.name : category,
+    entry_date: new Date(document.getElementById('cap-date').value || Date.now()).toISOString(),
+    logger: ls('logger') || 'Haley',
+    user_id: currentUser.id,
+    people: capPeople.slice(),
+    location: loc ? loc.name : '',
+    info_source: srcObj ? srcObj.name : capSource,
+    facts: facts,
+    assessment: document.getElementById('cap-assessment').value.trim(),
+    quote: document.getElementById('cap-quote').value.trim(),
+    severity: category === 'memories' ? null : (capSeverity || null),
+    witnesses: document.getElementById('cap-witnesses').value.trim(),
+    attachments: capAtts.map(function (a) { return { name: a.name, size: a.size, type: a.type }; }),
+    flagged: false,
+  };
+
+  await saveToSupabase(entry, 'cap');
+}
+
+// ── MEMORIES PAGE ─────────────────────────────────────────────────────────────
+var memPeople = [];
+var memAtts = [];
+
+function initMemoriesPage() {
+  setNow('mem-date');
+  loadLogger();
+  var memCat = ENTRY_CATEGORIES.find(function (c) { return c.id === 'memories'; });
+  var typeSel = document.getElementById('mem-type');
+  typeSel.innerHTML = '<option value="">Select type...</option>' +
+    memCat.types.map(function (t) { return '<option value="' + t.id + '">' + t.name + '</option>'; }).join('');
+  memPeople = [];
+  var peopleEl = document.getElementById('mem-people');
+  peopleEl.innerHTML = ALL_PEOPLE.map(function (p) {
+    return '<div class="kchip" id="memchip-' + p + '" onclick="toggleMemPerson(\'' + p + '\')">' + p + '</div>';
+  }).join('');
+}
+
+function toggleMemPerson(name) {
+  if (memPeople.includes(name)) memPeople = memPeople.filter(function (p) { return p !== name; });
+  else memPeople.push(name);
+  ALL_PEOPLE.forEach(function (p) {
+    var el = document.getElementById('memchip-' + p);
+    if (el) el.classList.toggle('on', memPeople.includes(p));
+  });
+}
+
+function handleMemFiles(files) {
+  Array.from(files).forEach(function (f) {
+    memAtts.push({ name: f.name, size: (f.size / 1048576).toFixed(1) + ' MB', type: f.type });
+  });
+  renderMemAtts();
+  document.getElementById('mem-files').value = '';
+}
+
+function renderMemAtts() {
+  document.getElementById('mem-att-list').innerHTML = memAtts.map(function (a, i) {
+    return '<div class="att-item"><span class="att-name">' + a.name + '</span><span class="att-meta">' + a.size + '</span>' +
+      '<button class="att-rm" onclick="rmMemAtt(' + i + ')">×</button></div>';
+  }).join('');
+}
+
+function rmMemAtt(i) { memAtts.splice(i, 1); renderMemAtts(); }
+
+function clearMemory() {
+  memPeople = [];
+  memAtts = [];
+  document.getElementById('mem-facts').value = '';
+  document.getElementById('mem-quote').value = '';
+  document.getElementById('mem-type').value = '';
+  document.getElementById('mem-att-list').innerHTML = '';
+  ALL_PEOPLE.forEach(function (p) {
+    var el = document.getElementById('memchip-' + p);
+    if (el) el.classList.remove('on');
+  });
+  setNow('mem-date');
+}
+
+async function saveMemory() {
+  var facts = document.getElementById('mem-facts').value.trim();
+  var type = document.getElementById('mem-type').value;
+  if (!facts) { showToast('mem', 'err', 'Please describe the memory.'); return; }
+  if (!type) { showToast('mem', 'err', 'Please select a type.'); return; }
+  if (!memPeople.length) { showToast('mem', 'err', 'Please select who was involved.'); return; }
+  var memCat = ENTRY_CATEGORIES.find(function (c) { return c.id === 'memories'; });
+  var typeObj = memCat ? memCat.types.find(function (t) { return t.id === type; }) : null;
+  var entry = {
+    entry_type: 'capture',
+    category: 'memories',
+    category_name: 'Positive Moments & Memories',
+    type: type,
+    type_name: typeObj ? typeObj.name : type,
+    entry_date: new Date(document.getElementById('mem-date').value || Date.now()).toISOString(),
+    logger: ls('logger') || 'Haley',
+    user_id: currentUser.id,
+    people: memPeople.slice(),
+    facts: facts,
+    quote: document.getElementById('mem-quote').value.trim(),
+    severity: null,
+    flagged: false,
+    attachments: memAtts.map(function (a) { return { name: a.name, size: a.size, type: a.type }; }),
+  };
+  await saveToSupabase(entry, 'mem');
+}
+
+// ── DAILY REFLECTION ──────────────────────────────────────────────────────────
 function initFlow() {
-  flowStep = 0;
-  flowKidsHome = true;
-  flowMaryContact = false;
-  flowMaryLikert = 0;
-  flowSelectedFeelings = [];
-  flowMaryKidsTreatment = '';
-  flowMoods = {};
-  flowStruggles = {};
-  flowPositives = {};
+  flowStep = 0; flowKidsHome = true; flowMaryContact = false;
+  flowMaryLikert = 0; flowMaryTreatment = ''; flowFeelings = [];
+  flowMoods = {}; flowStruggles = {}; flowPositives = {};
   document.querySelectorAll('.flow-step').forEach(function (s) { s.classList.remove('active'); });
   document.getElementById('step-0').classList.add('active');
-  var now = new Date();
-  document.getElementById('ref-date-sub').textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  document.getElementById('ref-date-sub').textContent =
+    new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   renderFeelings();
   updateProgress();
 }
@@ -349,7 +640,7 @@ function goToStep(n) {
   if (n === 2) buildMoodSections();
   if (n === 3) buildStruggleSections();
   if (n === 4) buildPositiveSections();
-  if (n === 7) buildReviewSummary();
+  if (n === 7) buildReflectionPreview();
 }
 
 function flowNext() {
@@ -365,12 +656,7 @@ function flowBack() {
 }
 
 function setKidsHome(val) { flowKidsHome = val; flowNext(); }
-
-function setMaryContact(val) {
-  flowMaryContact = val;
-  if (val) flowNext();
-  else goToStep(7);
-}
+function setMaryContact(val) { flowMaryContact = val; if (val) flowNext(); else goToStep(7); }
 
 function setMaryLikert(val, btn) {
   flowMaryLikert = val;
@@ -380,217 +666,161 @@ function setMaryLikert(val, btn) {
   });
 }
 
-function renderFeelings() {
-  var feelings = getFeelings();
-  var el = document.getElementById('feelings-wrap');
-  if (!el) return;
-  el.innerHTML = feelings.map(function (f) {
-    return '<div class="feeling-btn' + (flowSelectedFeelings.includes(f) ? ' on' : '') + '" onclick="toggleFeeling(\'' + f.replace(/'/g, "\\'") + '\')">' + f + '</div>';
-  }).join('');
-}
-
-function setMaryKidsTreatment(val, el) {
-  flowMaryKidsTreatment = val;
-  document.querySelectorAll('#mary-kids-treatment .kchip').forEach(function (c) {
-    c.classList.remove('on');
-  });
+function setMaryTreatment(val, el) {
+  flowMaryTreatment = val;
+  document.getElementById('mary-treatment-row').querySelectorAll('.kchip').forEach(function (c) { c.classList.remove('on'); });
   el.classList.add('on');
 }
 
+function renderFeelings() {
+  var el = document.getElementById('feelings-wrap');
+  if (!el) return;
+  el.innerHTML = FEELINGS.map(function (f) {
+    return '<div class="feeling-btn' + (flowFeelings.includes(f) ? ' on' : '') + '" onclick="toggleFeeling(\'' + f.replace(/'/g, "\\'") + '\')">' + f + '</div>';
+  }).join('');
+}
+
 function toggleFeeling(f) {
-  if (flowSelectedFeelings.includes(f)) flowSelectedFeelings.splice(flowSelectedFeelings.indexOf(f), 1);
-  else flowSelectedFeelings.push(f);
+  if (flowFeelings.includes(f)) flowFeelings.splice(flowFeelings.indexOf(f), 1);
+  else flowFeelings.push(f);
   renderFeelings();
 }
 
 function buildMoodSections() {
-  var el = document.getElementById('mood-sections');
-  el.innerHTML = KIDS.map(function (kid) {
-    var moods = MOODS.map(function (m) {
-      var on = flowMoods[kid] === m.label;
-      return '<div class="mood-opt' + (on ? ' on' : '') + '" onclick="setMood(\'' + kid + '\',\'' + m.label + '\')">' +
-        '<div class="mood-icon">' + m.emoji + '</div>' +
-        '<div class="mood-lbl">' + m.label + '</div></div>';
-    }).join('');
-    return '<div class="kid-section"><div class="kid-section-name">' + kid + '</div><div class="mood-row">' + moods + '</div></div>';
+  var KIDS_LIST = ['Landon', 'Luke', 'Leo'];
+  document.getElementById('mood-sections').innerHTML = KIDS_LIST.map(function (kid) {
+    return '<div class="kid-section"><div class="kid-section-name">' + kid + '</div>' +
+      '<div class="mood-row">' + MOODS.map(function (m) {
+        return '<div class="mood-opt' + (flowMoods[kid] === m.label ? ' on' : '') + '" onclick="setMood(\'' + kid + '\',\'' + m.label + '\')">' +
+          '<div class="mood-icon">' + m.emoji + '</div><div class="mood-lbl">' + m.label + '</div></div>';
+      }).join('') + '</div></div>';
   }).join('');
 }
 
 function setMood(kid, mood) { flowMoods[kid] = mood; buildMoodSections(); }
 
 function buildStruggleSections() {
-  var el = document.getElementById('struggle-sections');
-  el.innerHTML = KIDS.map(function (kid) {
-    return '<div class="kid-section">' +
-      '<div class="kid-section-name">' + kid + '</div>' +
+  var KIDS_LIST = ['Landon', 'Luke', 'Leo'];
+  document.getElementById('struggle-sections').innerHTML = KIDS_LIST.map(function (kid) {
+    return '<div class="kid-section"><div class="kid-section-name">' + kid + '</div>' +
       '<textarea id="struggle-' + kid + '" placeholder="Any struggles for ' + kid + ' today? Leave blank if none." style="min-height:70px;width:100%;">' +
       (flowStruggles[kid] || '') + '</textarea></div>';
   }).join('');
 }
 
 function buildPositiveSections() {
-  var el = document.getElementById('positive-sections');
-  el.innerHTML = KIDS.map(function (kid) {
-    return '<div class="kid-section">' +
-      '<div class="kid-section-name">' + kid + '</div>' +
-      '<textarea id="positive-' + kid + '" placeholder="Any wins or good moments with ' + kid + ' today? Leave blank if none." style="min-height:70px;width:100%;">' +
+  var KIDS_LIST = ['Landon', 'Luke', 'Leo'];
+  document.getElementById('positive-sections').innerHTML = KIDS_LIST.map(function (kid) {
+    return '<div class="kid-section"><div class="kid-section-name">' + kid + '</div>' +
+      '<textarea id="positive-' + kid + '" placeholder="Any wins or positive moments for ' + kid + ' today? Leave blank if none." style="min-height:70px;width:100%;">' +
       (flowPositives[kid] || '') + '</textarea></div>';
   }).join('');
 }
 
 function captureFlowData() {
-  KIDS.forEach(function (kid) {
-    var sel = document.getElementById('struggle-' + kid);
-    if (sel) flowStruggles[kid] = sel.value.trim();
-    var pel = document.getElementById('positive-' + kid);
-    if (pel) flowPositives[kid] = pel.value.trim();
+  ['Landon', 'Luke', 'Leo'].forEach(function (kid) {
+    var s = document.getElementById('struggle-' + kid);
+    if (s) flowStruggles[kid] = s.value.trim();
+    var p = document.getElementById('positive-' + kid);
+    if (p) flowPositives[kid] = p.value.trim();
   });
 }
 
-function maryLikertLabel(n) { return ['', 'Pleasant', 'Neutral', 'Tense', 'Difficult', 'Distressing'][n] || ''; }
+function maryLikertLabel(n) { return ['', 'Distressing', 'Difficult', 'Tense', 'Neutral', 'Pleasant'][n] || ''; }
 
-function buildReviewSummary() {
+function buildReflectionPreview() {
   captureFlowData();
-  var el = document.getElementById('review-summary');
-  var html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+  var el = document.getElementById('reflection-preview');
+  var html = '';
+  var KIDS_LIST = ['Landon', 'Luke', 'Leo'];
 
-  html += '<div><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px;">Kids</div>';
-  html += '<div style="font-size:14px;color:var(--text);">' + (flowKidsHome ? 'Home today' : 'Not home today') + '</div></div>';
-
-  if (flowKidsHome) {
-    html += '<div><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px;">Moods</div>';
-    html += KIDS.map(function (k) {
-      return '<div style="font-size:14px;color:var(--text);">' + k + ': ' + (flowMoods[k] || 'Not recorded') + '</div>';
-    }).join('');
-    html += '</div>';
-
-    var hasStruggles = KIDS.some(function (k) { return flowStruggles[k]; });
-    if (hasStruggles) {
-      html += '<div><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px;">Struggles</div>';
-      html += KIDS.filter(function (k) { return flowStruggles[k]; }).map(function (k) {
-        return '<div style="font-size:14px;color:var(--text);margin-bottom:3px;"><strong>' + k + ':</strong> ' + flowStruggles[k] + '</div>';
-      }).join('');
-      html += '</div>';
-    }
-
-    var hasPositives = KIDS.some(function (k) { return flowPositives[k]; });
-    if (hasPositives) {
-      html += '<div><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px;">Positive Moments</div>';
-      html += KIDS.filter(function (k) { return flowPositives[k]; }).map(function (k) {
-        return '<div style="font-size:14px;color:var(--text);margin-bottom:3px;"><strong>' + k + ':</strong> ' + flowPositives[k] + '</div>';
-      }).join('');
-      html += '</div>';
-    }
-  }
-
-  html += '<div><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px;">Mary Communication</div>';
-  if (flowMaryContact) {
-    html += '<div style="font-size:14px;color:var(--text);">Yes — ' + maryLikertLabel(flowMaryLikert) + (flowSelectedFeelings.length ? ' · ' + flowSelectedFeelings.join(', ') : '') + '</div>';
-    var mn = document.getElementById('mary-notes');
-    if (flowMaryKidsTreatment) html += '<div style="font-size:14px;color:var(--text);">Kids treatment: ' + flowMaryKidsTreatment + '</div>';
-    if (mn && mn.value.trim()) html += '<div style="font-size:13px;color:var(--text2);margin-top:4px;font-style:italic;">' + mn.value.trim() + '</div>';
+  if (!flowKidsHome) {
+    html += '<div class="card" style="margin-bottom:8px;"><div style="font-size:14px;color:var(--text);">Kids not home today.</div></div>';
   } else {
-    html += '<div style="font-size:14px;color:var(--text);">No contact today</div>';
+    html += '<div class="card" style="margin-bottom:8px;"><div class="ct">Moods</div>' +
+      KIDS_LIST.map(function (k) {
+        return '<div style="font-size:14px;color:var(--text);margin-bottom:4px;"><strong>' + k + ':</strong> ' + (flowMoods[k] || 'Not recorded') + '</div>';
+      }).join('') + '</div>';
+
+    var hasStruggles = KIDS_LIST.some(function (k) { return flowStruggles[k]; });
+    var hasPositives = KIDS_LIST.some(function (k) { return flowPositives[k]; });
+
+    if (hasStruggles) {
+      html += '<div class="card" style="margin-bottom:8px;"><div class="ct">Struggles</div>' +
+        KIDS_LIST.filter(function (k) { return flowStruggles[k]; }).map(function (k) {
+          return '<div style="font-size:14px;color:var(--text);margin-bottom:4px;"><strong>' + k + ':</strong> ' + flowStruggles[k] + '</div>';
+        }).join('') + '</div>';
+    }
+
+    if (hasPositives) {
+      html += '<div class="card" style="margin-bottom:8px;"><div class="ct">Positives</div>' +
+        KIDS_LIST.filter(function (k) { return flowPositives[k]; }).map(function (k) {
+          return '<div style="font-size:14px;color:var(--text);margin-bottom:4px;"><strong>' + k + ':</strong> ' + flowPositives[k] + '</div>';
+        }).join('') + '</div>';
+    }
   }
-  html += '</div></div>';
+
+  if (flowMaryContact) {
+    var mn = document.getElementById('mary-notes');
+    html += '<div class="card" style="margin-bottom:8px;"><div class="ct">Mary Communication</div>' +
+      '<div style="font-size:14px;color:var(--text);margin-bottom:4px;">Quality: ' + maryLikertLabel(flowMaryLikert) + ' (' + flowMaryLikert + '/5)</div>' +
+      (flowMaryTreatment ? '<div style="font-size:14px;color:var(--text);margin-bottom:4px;">Kids treatment: ' + flowMaryTreatment + '</div>' : '') +
+      (flowFeelings.length ? '<div style="font-size:14px;color:var(--text);margin-bottom:4px;">Feelings: ' + flowFeelings.join(', ') + '</div>' : '') +
+      (mn && mn.value.trim() ? '<div style="font-size:13px;color:var(--text2);font-style:italic;">' + mn.value.trim() + '</div>' : '') +
+      '</div>';
+  } else {
+    html += '<div class="card" style="margin-bottom:8px;"><div style="font-size:14px;color:var(--text3);">No Mary contact today.</div></div>';
+  }
+
   el.innerHTML = html;
 }
 
-// ── SAVE REFLECTION ───────────────────────────────────────────────────────────
 async function saveReflection() {
-  var maryNotes = document.getElementById('mary-notes').value.trim();
+  captureFlowData();
+  var KIDS_LIST = ['Landon', 'Luke', 'Leo'];
+  var maryNotes = document.getElementById('mary-notes') ? document.getElementById('mary-notes').value.trim() : '';
+  var today = new Date().toISOString().slice(0, 10);
+  var completed = ls('ci_completed') || {};
+  CHECKINS.forEach(function (ci) { completed[ci.id] = today; });
+  ls('ci_completed', completed);
+
   var entry = {
     entry_type: 'reflection',
+    category: 'reflection',
+    category_name: 'Daily Reflection',
+    type: 'daily',
+    type_name: 'Daily Reflection',
     entry_date: new Date().toISOString(),
     logger: ls('logger') || 'Haley',
     user_id: currentUser.id,
-    kids: KIDS,
+    people: KIDS_LIST,
     kids_home: flowKidsHome,
     moods: flowMoods,
     struggles: flowStruggles,
     positives: flowPositives,
     mary_contact: flowMaryContact,
     mary_likert: flowMaryContact ? flowMaryLikert : null,
-    mary_feelings: flowMaryContact ? flowSelectedFeelings : [],
-    mary_kids_treatment: flowMaryContact ? flowMaryKidsTreatment : '',
+    mary_kids_treatment: flowMaryContact ? flowMaryTreatment : '',
+    mary_feelings: flowMaryContact ? flowFeelings : [],
     mary_notes: flowMaryContact ? maryNotes : '',
+    facts: '',
+    assessment: '',
     flagged: false,
-    tags: [],
   };
 
-  var today = new Date().toISOString().slice(0, 10);
-  var completed = ls('ci_completed') || {};
-  getCheckIns().forEach(function (ci) { completed[ci.id] = today; });
-  ls('ci_completed', completed);
-
-  await saveEntryToStore(entry, 'ref');
+  await saveToSupabase(entry, 'ref');
 }
 
-// ── SAVE INCIDENT ─────────────────────────────────────────────────────────────
-async function saveIncident() {
-  var incident = document.getElementById('inc-incident').value.trim();
-  var factor = document.getElementById('inc-factor').value;
-  if (!incident) { showToast('inc', 'err', 'Please describe what happened.'); return; }
-  if (!factor) { showToast('inc', 'err', 'Please select a best-interest factor.'); return; }
-  if (!incKids.length) { showToast('inc', 'err', 'Please select which kid(s).'); return; }
-
-  var entry = {
-    entry_type: 'incident',
-    entry_date: new Date(document.getElementById('inc-date').value || Date.now()).toISOString(),
-    logger: ls('logger') || 'Haley',
-    user_id: currentUser.id,
-    kids: incKids.slice(),
-    factor: factor,
-    incident: incident,
-    quote: document.getElementById('inc-quote').value.trim(),
-    witnesses: document.getElementById('inc-witnesses').value.trim(),
-    flagged: flagged,
-    child_distress: distressVal || null,
-    tags: incSelectedTags.slice(),
-    attachments: incAtts.map(function (a) { return { name: a.name, size: a.size, type: a.type }; }),
-  };
-
-  await saveEntryToStore(entry, 'inc');
-}
-
-// ── SAVE POSITIVE ─────────────────────────────────────────────────────────────
-async function savePositive() {
-  var body = document.getElementById('pos-body').value.trim();
-  if (!body) { showToast('pos', 'err', 'Please describe the moment.'); return; }
-  if (!posKids.length) { showToast('pos', 'err', 'Please select F(s).'); return; }
-
-  var entry = {
-    entry_type: 'positive',
-    entry_date: new Date(document.getElementById('pos-date').value || Date.now()).toISOString(),
-    logger: ls('logger') || 'Haley',
-    user_id: currentUser.id,
-    kids: posKids.slice(),
-    incident: body,
-    quote: document.getElementById('pos-quote').value.trim(),
-    flagged: false,
-    tags: posSelectedTags.slice(),
-    attachments: [],
-  };
-
-  await saveEntryToStore(entry, 'pos');
-}
-
-// ── GENERIC SAVE ──────────────────────────────────────────────────────────────
-async function saveEntryToStore(entry, prefix) {
+// ── SUPABASE SAVE ─────────────────────────────────────────────────────────────
+async function saveToSupabase(entry, prefix) {
   var { data, error } = await sb.from('entries').insert(entry).select();
-
-  if (error) {
-    showToast(prefix, 'err', 'Save failed: ' + error.message);
-    return;
-  }
-
-  allEntries.unshift(data[0]);
+  if (error) { showToast(prefix, 'err', 'Save failed: ' + error.message); return; }
+  allEntries.unshift(Array.isArray(data) ? data[0] : data);
   showToast(prefix, 'ok', 'Saved.');
   updateCount();
-
-  if (prefix === 'inc') clearIncident();
-  else if (prefix === 'pos') clearPositive();
+  if (prefix === 'cap') clearCapture();
   else if (prefix === 'ref') initFlow();
+  else if (prefix === 'mem') clearMemory();
 }
 
 // ── LOAD ENTRIES ──────────────────────────────────────────────────────────────
@@ -600,7 +830,6 @@ async function loadEntries() {
     .select('*')
     .order('entry_date', { ascending: false })
     .limit(500);
-
   if (!error && data) allEntries = data;
 }
 
@@ -608,381 +837,248 @@ function updateCount() {
   document.getElementById('nav-count').textContent = allEntries.length;
 }
 
-// ── CLEAR FORMS ───────────────────────────────────────────────────────────────
-function clearIncident() {
-  ['inc-incident', 'inc-quote', 'inc-witnesses'].forEach(function (id) { document.getElementById(id).value = ''; });
-  document.getElementById('inc-factor').value = '';
-  document.getElementById('inc-hint').textContent = '';
-  incKids = []; incAtts = []; incSelectedTags = []; distressVal = 0; flagged = false;
- ['Landon', 'Luke', 'Leo', 'All', 'Haley', 'Dave'].forEach(function (k) {
-  var el = document.getElementById('ick-' + k);
-  if (el) el.classList.remove('on');
-});
-  document.querySelectorAll('#inc-distress .lk-btn').forEach(function (b) { b.className = 'lk-btn'; });
-  renderAtts('inc');
-  renderTagButtons('inc');
+// ── VIEW LOG ──────────────────────────────────────────────────────────────────
+function switchViewTab(tab, el) {
+  document.querySelectorAll('.vtab').forEach(function (t) { t.classList.remove('active'); });
+  document.querySelectorAll('.view-panel').forEach(function (p) { p.classList.remove('active'); });
+  el.classList.add('active');
+  document.getElementById('vp-' + tab).classList.add('active');
+  if (tab === 'feed') renderFeed();
+  if (tab === 'byperson') renderByPerson(currentPersonFilter || 'Landon');
+  if (tab === 'trends') renderTrends();
 }
 
-function clearPositive() {
-  ['pos-body', 'pos-quote'].forEach(function (id) { document.getElementById(id).value = ''; });
-  posKids = []; posAtts = []; posSelectedTags = [];
- ['Landon', 'Luke', 'Leo', 'All'].forEach(function (k) {
-  var el = document.getElementById('pok-' + k);
-  if (el) el.classList.remove('on');
-});
-  renderAtts('pos');
-  renderTagButtons('pos');
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.fpill').forEach(function (p) { p.classList.remove('active'); });
+  el.classList.add('active');
+  renderFeed();
+}
+
+function renderFeed() {
+  var list = document.getElementById('entries-list');
+  var filtered = allEntries.filter(function (e) {
+    if (currentFilter === 'all') return true;
+    if (currentFilter === 'reflection') return e.entry_type === 'reflection';
+    if (currentFilter === 'Haley' || currentFilter === 'Dave') return e.logger === currentFilter;
+    return e.category === currentFilter;
+  });
+  if (!filtered.length) { list.innerHTML = '<div class="empty">No entries match this filter.</div>'; return; }
+  list.innerHTML = filtered.map(renderEntryCard).join('');
+}
+
+function renderByPerson(person) {
+  currentPersonFilter = person;
+  var el = document.getElementById('person-tabs');
+  el.innerHTML = ALL_PEOPLE.map(function (p) {
+    return '<button class="fpill' + (p === person ? ' active' : '') + '" onclick="renderByPerson(\'' + p + '\')">' + p + '</button>';
+  }).join('');
+  var entries = allEntries.filter(function (e) {
+    return (e.people || []).includes(person);
+  });
+  var container = document.getElementById('person-entries');
+  if (!entries.length) { container.innerHTML = '<div class="empty">No entries for ' + person + '.</div>'; return; }
+  container.innerHTML = entries.map(renderEntryCard).join('');
+}
+
+function renderEntryCard(e) {
+  var d = new Date(e.entry_date || e.created_at);
+  var ds = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) +
+    ' · ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  var people = (e.people || []).join(', ');
+  var atts = e.attachments || [];
+  var catClass = e.category || 'kids';
+  var catBadgeClass = 'b-' + catClass;
+
+  var body = '';
+  if (e.entry_type === 'reflection') {
+    var KIDS_LIST = ['Landon', 'Luke', 'Leo'];
+    var parts = [];
+    if (e.kids_home === false) { parts.push('Kids not home.'); }
+    else {
+      var moodStr = KIDS_LIST.filter(function (k) { return e.moods && e.moods[k]; })
+        .map(function (k) { return k + ': ' + e.moods[k]; }).join(' · ');
+      if (moodStr) parts.push('Moods — ' + moodStr);
+      var struggles = KIDS_LIST.filter(function (k) { return e.struggles && e.struggles[k]; })
+        .map(function (k) { return k + ': ' + e.struggles[k]; }).join(' | ');
+      if (struggles) parts.push('Struggles — ' + struggles);
+      var positives = KIDS_LIST.filter(function (k) { return e.positives && e.positives[k]; })
+        .map(function (k) { return k + ': ' + e.positives[k]; }).join(' | ');
+      if (positives) parts.push('Positives — ' + positives);
+    }
+    if (e.mary_contact) {
+      parts.push('Mary: ' + maryLikertLabel(e.mary_likert) +
+        (e.mary_kids_treatment ? ' · Kids: ' + e.mary_kids_treatment : '') +
+        (e.mary_feelings && e.mary_feelings.length ? ' · ' + e.mary_feelings.join(', ') : ''));
+    }
+    body = parts.join('<br>');
+  } else {
+    body = '';
+  }
+
+  return '<div class="ecard ' + catClass + '">' +
+    '<div class="ehdr">' +
+      '<div class="badges">' +
+        '<span class="bdg ' + (e.logger === 'Dave' ? 'b-d' : 'b-h') + '">' + e.logger + '</span>' +
+        '<span class="bdg ' + catBadgeClass + '">' + (e.category_name || e.category) + '</span>' +
+        (e.type_name ? '<span class="bdg b-type">' + e.type_name + '</span>' : '') +
+        (people ? '<span class="bdg b-kid">' + people + '</span>' : '') +
+        (e.location ? '<span class="bdg b-loc">' + e.location + '</span>' : '') +
+        (e.info_source ? '<span class="bdg b-source">' + e.info_source + '</span>' : '') +
+      '</div>' +
+      '<span class="edate">' + ds + '</span>' +
+    '</div>' +
+    (body ? '<div class="ebody">' + body + '</div>' : '') +
+    (e.facts ? '<div class="facts-block"><div class="facts-label">Facts</div><div class="facts-text">' + e.facts + '</div></div>' : '') +
+    (e.assessment ? '<div class="assessment-block"><div class="assessment-label">Our Assessment</div><div class="facts-text">' + e.assessment + '</div></div>' : '') +
+    (e.quote ? '<div class="equote">"' + e.quote + '"</div>' : '') +
+    (e.severity ? '<div class="escale"><span class="stag">Severity ' + e.severity + '/5</span></div>' : '') +
+    (e.witnesses ? '<div class="ewit">Witnesses: ' + e.witnesses + '</div>' : '') +
+    (atts.length ? '<div class="eatts">' + atts.map(function (a) { return '<span class="atag">' + a.name + '</span>'; }).join('') + '</div>' : '') +
+    '</div>';
+}
+
+// ── TRENDS ────────────────────────────────────────────────────────────────────
+function renderTrends() {
+  var el = document.getElementById('trends-grid');
+  var captures = allEntries.filter(function (e) { return e.entry_type === 'capture'; });
+
+  // By category
+  var catCounts = {};
+  ENTRY_CATEGORIES.forEach(function (c) { catCounts[c.name] = 0; });
+  captures.forEach(function (e) { if (catCounts[e.category_name] !== undefined) catCounts[e.category_name]++; });
+  var maxCat = Math.max.apply(null, Object.values(catCounts)) || 1;
+
+  // By person
+  var personCounts = {};
+  ALL_PEOPLE.forEach(function (p) { personCounts[p] = 0; });
+  captures.forEach(function (e) { (e.people || []).forEach(function (p) { if (personCounts[p] !== undefined) personCounts[p]++; }); });
+  var maxPerson = Math.max.apply(null, Object.values(personCounts)) || 1;
+
+  // Mary likert average
+  var maryEntries = allEntries.filter(function (e) { return e.entry_type === 'reflection' && e.mary_contact && e.mary_likert; });
+  var avgLikert = maryEntries.length ? (maryEntries.reduce(function (a, e) { return a + e.mary_likert; }, 0) / maryEntries.length).toFixed(1) : '—';
+
+  // Severity avg by category
+  var sevByCat = {};
+  ENTRY_CATEGORIES.forEach(function (c) { sevByCat[c.id] = []; });
+  captures.forEach(function (e) { if (e.severity && sevByCat[e.category]) sevByCat[e.category].push(e.severity); });
+
+  el.innerHTML =
+    '<div class="trend-box"><div class="trend-title">Entries by Category</div>' +
+    Object.entries(catCounts).map(function (kv) {
+      return '<div class="bar-row"><div class="bar-label">' + kv[0] + '</div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + Math.round(kv[1] / maxCat * 100) + '%"></div></div>' +
+        '<div class="bar-count">' + kv[1] + '</div></div>';
+    }).join('') + '</div>' +
+
+    '<div class="trend-box"><div class="trend-title">Entries by Person</div>' +
+    Object.entries(personCounts).map(function (kv) {
+      return '<div class="bar-row"><div class="bar-label">' + kv[0] + '</div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + Math.round(kv[1] / maxPerson * 100) + '%"></div></div>' +
+        '<div class="bar-count">' + kv[1] + '</div></div>';
+    }).join('') + '</div>' +
+
+    '<div class="trend-box"><div class="trend-title">Mary Co-Parenting</div>' +
+    '<div style="font-size:28px;font-weight:600;color:var(--accent);margin-bottom:4px;">' + avgLikert + '</div>' +
+    '<div style="font-size:12px;color:var(--text3);">Avg interaction quality (1=Distressing, 5=Pleasant)<br>' + maryEntries.length + ' interactions logged</div>' +
+    '</div>' +
+
+    '<div class="trend-box"><div class="trend-title">Avg Severity by Category</div>' +
+    ENTRY_CATEGORIES.filter(function (c) { return c.id !== 'memories'; }).map(function (c) {
+      var arr = sevByCat[c.id];
+      var avg = arr.length ? (arr.reduce(function (a, b) { return a + b; }, 0) / arr.length).toFixed(1) : '—';
+      return '<div class="bar-row"><div class="bar-label">' + c.name + '</div>' +
+        '<div style="font-size:13px;font-weight:500;color:var(--text2);">' + avg + '</div></div>';
+    }).join('') + '</div>';
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────────────────
+function toggleExpCat(id, el) {
+  if (expCats.includes(id)) expCats = expCats.filter(function (c) { return c !== id; });
+  else expCats.push(id);
+  el.classList.toggle('on', expCats.includes(id));
+}
+
+function genExport() {
+  var from = document.getElementById('exp-from').value;
+  var to = document.getElementById('exp-to').value;
+  var filtered = allEntries.filter(function (e) {
+    if (!expCats.includes(e.category) && e.entry_type !== 'reflection') return false;
+    if (e.entry_type === 'reflection' && !expCats.includes('reflection')) return false;
+    if (from && e.entry_date < new Date(from).toISOString()) return false;
+    if (to && e.entry_date > new Date(to + 'T23:59:59').toISOString()) return false;
+    return true;
+  });
+
+  if (!filtered.length) { alert('No entries match the selected filters.'); return; }
+
+  var out = 'COPARENT DOCUMENTATION LOG\nOttawa County — Custody Case\n';
+  out += 'Generated: ' + new Date().toLocaleString() + '\n';
+  out += 'Total entries: ' + filtered.length + '\n';
+  if (from || to) out += 'Date range: ' + (from || 'beginning') + ' to ' + (to || 'present') + '\n';
+  out += '='.repeat(60) + '\n\n';
+
+  // Group by category
+  var groups = {};
+  filtered.forEach(function (e) {
+    var key = e.category_name || e.category || 'Other';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(e);
+  });
+
+  Object.keys(groups).sort().forEach(function (cat) {
+    out += cat.toUpperCase() + '\n' + '-'.repeat(40) + '\n';
+    groups[cat].forEach(function (e) {
+      var d = new Date(e.entry_date || e.created_at);
+      out += '\n[' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '] ';
+      out += e.logger;
+      if (e.people && e.people.length) out += ' | ' + e.people.join(', ');
+      if (e.type_name) out += ' | ' + e.type_name;
+      if (e.location) out += ' | ' + e.location;
+      if (e.info_source) out += ' | Source: ' + e.info_source;
+      if (e.severity) out += ' | Severity: ' + e.severity + '/5';
+      out += '\n';
+
+      if (e.entry_type === 'reflection') {
+        var KIDS_LIST = ['Landon', 'Luke', 'Leo'];
+        if (e.kids_home === false) { out += 'Kids not home.\n'; }
+        else {
+          var moodStr = KIDS_LIST.filter(function (k) { return e.moods && e.moods[k]; }).map(function (k) { return k + ': ' + e.moods[k]; }).join(', ');
+          if (moodStr) out += 'Moods — ' + moodStr + '\n';
+          KIDS_LIST.forEach(function (k) { if (e.struggles && e.struggles[k]) out += k + ' struggle: ' + e.struggles[k] + '\n'; });
+          KIDS_LIST.forEach(function (k) { if (e.positives && e.positives[k]) out += k + ' positive: ' + e.positives[k] + '\n'; });
+        }
+        if (e.mary_contact) {
+          out += 'Mary: ' + maryLikertLabel(e.mary_likert) + ' (' + e.mary_likert + '/5)';
+          if (e.mary_kids_treatment) out += ' | Kids: ' + e.mary_kids_treatment;
+          if (e.mary_feelings && e.mary_feelings.length) out += ' | Felt: ' + e.mary_feelings.join(', ');
+          out += '\n';
+          if (e.mary_notes) out += 'Notes: ' + e.mary_notes + '\n';
+        }
+      } else {
+        if (e.facts) out += 'FACTS: ' + e.facts + '\n';
+        if (e.assessment) out += 'ASSESSMENT: ' + e.assessment + '\n';
+        if (e.quote) out += 'QUOTE: "' + e.quote + '"\n';
+        if (e.witnesses) out += 'Witnesses: ' + e.witnesses + '\n';
+        if (e.attachments && e.attachments.length) out += 'Attachments: ' + e.attachments.map(function (a) { return a.name; }).join(', ') + '\n';
+      }
+    });
+    out += '\n';
+  });
+
+  var ta = document.getElementById('exp-text');
+  ta.value = out;
+  document.getElementById('exp-output').style.display = 'block';
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function setNow(id) {
   var n = new Date();
-  document.getElementById(id).value = new Date(n - n.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  var el = document.getElementById(id);
+  if (el) el.value = new Date(n - n.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 
-function updateHint() {
-  document.getElementById('inc-hint').textContent = FACTOR_HINTS[document.getElementById('inc-factor').value] || '';
-}
-
-function toggleKid(prefix, kid) {
-  var pre = prefix === 'inc' ? 'ick-' : 'pok-';
-  var current = prefix === 'inc' ? incKids : posKids;
-
-  if (kid === 'All') {
-    var isAll = current.includes('All');
-    if (prefix === 'inc') incKids = isAll ? [] : ['All'];
-    else posKids = isAll ? [] : ['All'];
-    ['Landon', 'Luke', 'Leo', 'Haley', 'Dave'].forEach(function (k) {
-      var el = document.getElementById(pre + k);
-      if (el) el.classList.remove('on');
-    });
-  } else {
-    if (prefix === 'inc') {
-      incKids = incKids.filter(function (k) { return k !== 'All'; });
-      if (incKids.includes(kid)) incKids = incKids.filter(function (k) { return k !== kid; });
-      else incKids.push(kid);
-    } else {
-      posKids = posKids.filter(function (k) { return k !== 'All'; });
-      if (posKids.includes(kid)) posKids = posKids.filter(function (k) { return k !== kid; });
-      else posKids.push(kid);
-    }
-    var allEl = document.getElementById(pre + 'All');
-    if (allEl) allEl.classList.remove('on');
-  }
-
-  var updated = prefix === 'inc' ? incKids : posKids;
-  ['Landon', 'Luke', 'Leo', 'All', 'Haley', 'Dave'].forEach(function (k) {
-    var el = document.getElementById(pre + k);
-    if (el) el.classList.toggle('on', updated.includes(k));
-  });
-}
-
-function renderTagButtons(prefix) {
-  var tags = getTags();
-  var sel = prefix === 'inc' ? incSelectedTags : posSelectedTags;
-  var el = document.getElementById(prefix + '-tags');
-  if (!el) return;
-  el.innerHTML = tags.map(function (t) {
-    var cls = 'tag-btn' + (sel.includes(t.id) ? ' on ' + t.type : '');
-    return '<div class="' + cls + '" onclick="toggleTag(\'' + prefix + '\',\'' + t.id + '\')">' + t.name + '</div>';
-  }).join('');
-}
-
-function toggleTag(prefix, tid) {
-  var arr = prefix === 'inc' ? incSelectedTags : posSelectedTags;
-  if (arr.includes(tid)) arr.splice(arr.indexOf(tid), 1);
-  else arr.push(tid);
-  renderTagButtons(prefix);
-}
-
-function setDistress(val, btn) {
-  distressVal = val;
-  document.getElementById('inc-distress').querySelectorAll('.lk-btn').forEach(function (b, i) {
-    b.className = 'lk-btn';
-    if (i < val) b.classList.add('s' + val);
-  });
-}
-
-var flagOn = false;
-function togFlag() {
-  flagOn = !flagOn;
-  flagged = flagOn;
-  var sw = document.getElementById('flag-sw');
-  var row = document.getElementById('tog-flagged');
-  sw.style.background = flagOn ? 'var(--accent)' : 'var(--surface3)';
-  sw.querySelector('div').style.transform = flagOn ? 'translateX(16px)' : '';
-  row.style.background = flagOn ? 'var(--accent-l)' : '';
-}
-
-function handleFiles(prefix, files) {
-  var arr = prefix === 'inc' ? incAtts : posAtts;
-  Array.from(files).forEach(function (f) {
-    arr.push({ name: f.name, size: (f.size / 1048576).toFixed(1) + ' MB', type: f.type });
-  });
-  renderAtts(prefix);
-  document.getElementById(prefix + '-files').value = '';
-}
-
-function renderAtts(prefix) {
-  var arr = prefix === 'inc' ? incAtts : posAtts;
-  var el = document.getElementById(prefix + '-att-list');
-  if (!el) return;
-  el.innerHTML = arr.map(function (a, i) {
-    return '<div class="att-item"><span class="att-name">' + a.name + '</span><span class="att-meta">' + a.size + '</span>' +
-      '<button class="att-rm" onclick="rmAtt(\'' + prefix + '\',' + i + ')">×</button></div>';
-  }).join('');
-}
-
-function rmAtt(prefix, i) {
-  var arr = prefix === 'inc' ? incAtts : posAtts;
-  arr.splice(i, 1);
-  renderAtts(prefix);
-}
-
-// ── RENDER LOG ────────────────────────────────────────────────────────────────
-function setFilter(f, el) {
-  currentFilter = f;
-  document.querySelectorAll('.fpill').forEach(function (p) { p.classList.remove('active'); });
-  el.classList.add('active');
-  renderEntries();
-}
-
-function distressLbl(n) { return ['', 'None', 'Mild', 'Moderate', 'High', 'Severe'][n] || ''; }
-
-function renderEntries() {
-  var list = document.getElementById('entries-list');
-  var tags = getTags();
-  var filtered = allEntries.filter(function (e) {
-    if (currentFilter === 'all') return true;
-    if (currentFilter === 'flagged') return e.flagged;
-    if (['incident', 'positive', 'reflection'].includes(currentFilter)) return e.entry_type === currentFilter;
-    if (currentFilter === 'Haley' || currentFilter === 'Dave') return e.logger === currentFilter;
-    return (e.kids || []).includes(currentFilter) || (e.kids || []).includes('All');
-  });
-
-  updateCount();
-
-  if (!filtered.length) {
-    list.innerHTML = '<div class="empty">No entries match this filter.</div>';
-    return;
-  }
-
-  list.innerHTML = filtered.map(function (e) {
-    var d = new Date(e.entry_date || e.created_at);
-    var ds = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) +
-      ' · ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    var kids = (e.kids || []).join(', ');
-    var atts = e.attachments || [];
-    var entryTags = (e.tags || []).map(function (tid) {
-      var t = tags.find(function (x) { return x.id === tid; });
-      return t ? '<span class="bdg b-tag">' + t.name + '</span>' : '';
-    }).join('');
-    var typeLabel = { incident: 'Incident', positive: 'Positive moment', reflection: 'Daily reflection' }[e.entry_type] || e.entry_type;
-    var cardCls = 'ecard' + (e.flagged ? ' flagged' : '') + (e.entry_type === 'positive' ? ' positive' : '') + (e.entry_type === 'reflection' ? ' daily' : '');
-
-    var body = '';
-    if (e.entry_type === 'reflection') {
-      var parts = [];
-      if (e.kids_home === false) {
-        parts.push('Kids not home.');
-      } else {
-        var moodStr = KIDS.filter(function (k) { return e.moods && e.moods[k]; })
-          .map(function (k) { return k + ': ' + e.moods[k]; }).join(' · ');
-        if (moodStr) parts.push('Moods — ' + moodStr);
-        var struggles = KIDS.filter(function (k) { return e.struggles && e.struggles[k]; })
-          .map(function (k) { return k + ': ' + e.struggles[k]; }).join(' | ');
-        if (struggles) parts.push('Struggles — ' + struggles);
-        var positives = KIDS.filter(function (k) { return e.positives && e.positives[k]; })
-          .map(function (k) { return k + ': ' + e.positives[k]; }).join(' | ');
-        if (positives) parts.push('Positives — ' + positives);
-      }
-      if (e.mary_contact) {
-        parts.push('Mary: ' + maryLikertLabel(e.mary_likert) +
-          (e.mary_feelings && e.mary_feelings.length ? ' (' + e.mary_feelings.join(', ') + ')' : ''));
-      }
-      body = parts.join('<br>');
-    } else {
-      body = e.incident || '';
-    }
-
-    return '<div class="' + cardCls + '">' +
-      '<div class="ehdr">' +
-        '<div class="badges">' +
-          '<span class="bdg ' + (e.logger === 'Dave' ? 'b-d' : 'b-h') + '">' + e.logger + '</span>' +
-          '<span class="bdg b-type">' + typeLabel + '</span>' +
-          (kids ? '<span class="bdg b-kid">' + kids + '</span>' : '') +
-          (e.factor ? '<span class="bdg b-factor">' + e.factor + '</span>' : '') +
-          (e.flagged ? '<span class="bdg b-flagged">Flagged</span>' : '') +
-          entryTags +
-        '</div>' +
-        '<span class="edate">' + ds + '</span>' +
-      '</div>' +
-      '<div class="ebody">' + body + '</div>' +
-      (e.quote ? '<div class="equote">"' + e.quote + '"</div>' : '') +
-      (e.child_distress ? '<div class="escale"><span class="stag">Distress ' + e.child_distress + '/5 — ' + distressLbl(e.child_distress) + '</span></div>' : '') +
-      (e.witnesses ? '<div class="ewit">Witnesses: ' + e.witnesses + '</div>' : '') +
-      (atts.length ? '<div class="eatts">' + atts.map(function (a) { return '<span class="atag">' + a.name + '</span>'; }).join('') + '</div>' : '') +
-      '</div>';
-  }).join('');
-}
-
-// ── SUMMARY ───────────────────────────────────────────────────────────────────
-function renderSummary() {
-  document.getElementById('s-total').textContent = allEntries.length;
-  document.getElementById('s-inc').textContent = allEntries.filter(function (e) { return e.entry_type === 'incident'; }).length;
-  document.getElementById('s-pos').textContent = allEntries.filter(function (e) { return e.entry_type === 'positive'; }).length;
-  document.getElementById('s-flag').textContent = allEntries.filter(function (e) { return e.flagged; }).length;
-}
-
-function genExport() {
-  if (!allEntries.length) { alert('No entries to export yet.'); return; }
-  var incidents = allEntries.filter(function (e) { return e.entry_type === 'incident'; });
-  var groups = {};
-  incidents.forEach(function (e) { if (!groups[e.factor]) groups[e.factor] = []; groups[e.factor].push(e); });
-  var flaggedList = incidents.filter(function (e) { return e.flagged; });
-  var tags = getTags();
-
-  function tagNames(ids) {
-    return (ids || []).map(function (id) {
-      var t = tags.find(function (x) { return x.id === id; });
-      return t ? t.name : '';
-    }).filter(Boolean).join(', ');
-  }
-
-  var out = 'PARENTING DOCUMENTATION LOG\nOttawa County — Custody Case\n';
-  out += 'Generated: ' + new Date().toLocaleString() + '\n';
-  out += 'Incidents: ' + incidents.length + ' | Positive: ' + allEntries.filter(function (e) { return e.entry_type === 'positive'; }).length +
-    ' | Reflections: ' + allEntries.filter(function (e) { return e.entry_type === 'reflection'; }).length +
-    ' | Flagged: ' + flaggedList.length + '\n';
-  out += '='.repeat(60) + '\n\n';
-
-  if (flaggedList.length) {
-    out += '★ FLAGGED — PRIORITY FOR MOTION\n' + '-'.repeat(40) + '\n';
-    flaggedList.forEach(function (e) {
-      var d = new Date(e.entry_date || e.created_at);
-      out += '\n[' + d.toLocaleDateString() + '] ' + e.logger + ' | ' + (e.kids || []).join(', ') + ' | ' + e.factor + '\n' + e.incident + '\n';
-      if (e.quote) out += 'QUOTE: "' + e.quote + '"\n';
-      if (e.witnesses) out += 'Witnesses: ' + e.witnesses + '\n';
-    });
-    out += '\n' + '='.repeat(60) + '\n\n';
-  }
-
-  out += 'INCIDENTS BY BEST-INTEREST FACTOR\n\n';
-  Object.keys(groups).sort().forEach(function (factor) {
-    out += factor.toUpperCase() + '\n' + '-'.repeat(40) + '\n';
-    groups[factor].forEach(function (e) {
-      var d = new Date(e.entry_date || e.created_at);
-      out += '\n[' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '] ';
-      out += e.logger + ' | ' + (e.kids || []).join(', ');
-      if (e.child_distress) out += ' | Distress: ' + e.child_distress + '/5';
-      if (e.flagged) out += ' ★';
-      var tn = tagNames(e.tags); if (tn) out += ' | ' + tn;
-      out += '\n' + e.incident + '\n';
-      if (e.quote) out += 'DIRECT QUOTE: "' + e.quote + '"\n';
-      if (e.witnesses) out += 'Witnesses: ' + e.witnesses + '\n';
-      if (e.attachments && e.attachments.length) out += 'Attachments: ' + e.attachments.map(function (a) { return a.name; }).join(', ') + '\n';
-    });
-    out += '\n';
-  });
-
-  var positives = allEntries.filter(function (e) { return e.entry_type === 'positive'; });
-  if (positives.length) {
-    out += 'POSITIVE MOMENTS\n' + '-'.repeat(40) + '\n';
-    positives.forEach(function (e) {
-      var d = new Date(e.entry_date || e.created_at);
-      out += '\n[' + d.toLocaleDateString() + '] ' + e.logger + ' | ' + (e.kids || []).join(', ') + '\n' + e.incident + '\n';
-      if (e.quote) out += 'QUOTE: "' + e.quote + '"\n';
-    });
-  }
-
-  var ta = document.getElementById('exp-text');
-  ta.value = out;
-  ta.style.display = 'block';
-  document.getElementById('copy-hint').style.display = 'block';
-}
-
-// ── SETTINGS ──────────────────────────────────────────────────────────────────
-function renderSettings() { renderTagSettings(); renderFeelingsSettings(); renderCISettings(); }
-
-function renderTagSettings() {
-  var tags = getTags();
-  var el = document.getElementById('tag-set-list');
-  var colors = { general: 'var(--text2)', coparent: '#6040a0', preference: 'var(--rose)', positive: 'var(--sage)' };
-  el.innerHTML = tags.map(function (t) {
-    return '<div class="set-item"><div class="set-item-label">' + t.name + '</div>' +
-      '<div class="set-item-meta" style="color:' + colors[t.type] + '">' + t.type + '</div>' +
-      '<button class="btn-ghost" onclick="rmTag(\'' + t.id + '\')">Remove</button></div>';
-  }).join('');
-}
-
-function addTag() {
-  var name = document.getElementById('new-tag-name').value.trim();
-  var type = document.getElementById('new-tag-type').value;
-  if (!name) return;
-  var tags = getTags();
-  tags.push({ id: 't' + Date.now(), name: name, type: type });
-  ls('tags', tags);
-  renderTagSettings();
-  document.getElementById('new-tag-name').value = '';
-}
-
-function rmTag(id) { ls('tags', getTags().filter(function (t) { return t.id !== id; })); renderTagSettings(); }
-
-function renderFeelingsSettings() {
-  var feelings = getFeelings();
-  var el = document.getElementById('feelings-set-list');
-  el.innerHTML = feelings.map(function (f, i) {
-    return '<div class="set-item"><div class="set-item-label">' + f + '</div>' +
-      '<button class="btn-ghost" onclick="rmFeeling(' + i + ')">Remove</button></div>';
-  }).join('');
-}
-
-function addFeeling() {
-  var f = document.getElementById('new-feeling').value.trim();
-  if (!f) return;
-  var feelings = getFeelings();
-  feelings.push(f);
-  ls('feelings', feelings);
-  renderFeelingsSettings();
-  document.getElementById('new-feeling').value = '';
-}
-
-function rmFeeling(i) {
-  var feelings = getFeelings();
-  feelings.splice(i, 1);
-  ls('feelings', feelings);
-  renderFeelingsSettings();
-}
-
-function renderCISettings() {
-  var items = getCheckIns();
-  var el = document.getElementById('ci-set-list');
-  el.innerHTML = items.map(function (item) {
-    return '<div class="set-item"><div class="set-item-label">' + item.name + '</div>' +
-      '<div class="set-item-meta">' + item.freq + (item.who ? ' · ' + item.who : '') + '</div>' +
-      '<button class="btn-ghost" onclick="rmCI(\'' + item.id + '\')">Remove</button></div>';
-  }).join('');
-}
-
-function addCheckIn() {
-  var name = document.getElementById('new-ci-name').value.trim();
-  var freq = document.getElementById('new-ci-freq').value;
-  var who = document.getElementById('new-ci-who').value.trim();
-  if (!name) return;
-  var items = getCheckIns();
-  items.push({ id: 'ci' + Date.now(), name: name, freq: freq, who: who });
-  ls('checkins', items);
-  renderCISettings();
-  document.getElementById('new-ci-name').value = '';
-  document.getElementById('new-ci-who').value = '';
-}
-
-function rmCI(id) {
-  ls('checkins', getCheckIns().filter(function (c) { return c.id !== id; }));
-  renderCISettings();
-}
-
-// ── TOAST ─────────────────────────────────────────────────────────────────────
 function showToast(prefix, type, msg) {
   var id = prefix + '-' + (type === 'ok' ? 'ok' : 'err');
   var el = document.getElementById(id);
@@ -993,4 +1089,5 @@ function showToast(prefix, type, msg) {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
+loadTheme();
 initAuth();

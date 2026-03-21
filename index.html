@@ -7,15 +7,94 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css"/>
+<style>
+/* ── NEW STYLES FOR V2 ── */
+.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem;}
+.cat-btn{display:flex;flex-direction:column;gap:5px;padding:1rem 1.1rem;border:1px solid var(--border);border-radius:var(--radius-lg);cursor:pointer;transition:all .15s;background:var(--surface);text-align:left;font-family:'Jost',sans-serif;}
+.cat-btn:hover{border-color:var(--border2);transform:translateY(-1px);}
+.cat-btn.on{border-width:2px;}
+.cat-icon{font-size:20px;}
+.cat-name{font-size:14px;font-weight:600;color:var(--text);}
+.cat-desc{font-size:11px;color:var(--text3);}
+.source-row{display:flex;gap:7px;flex-wrap:wrap;}
+.severity-wrap{display:flex;flex-direction:column;gap:6px;}
+.sev-track{display:flex;gap:5px;}
+.sev-btn{flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:9px;background:var(--surface);cursor:pointer;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--text3);text-align:center;transition:all .12s;line-height:1.3;}
+.sev-btn:hover{border-color:var(--border2);color:var(--text2);}
+.sev-btn.on-1{background:var(--sage-l);border-color:#7abf96;color:#2a6644;}
+.sev-btn.on-2{background:var(--amber-l);border-color:#d4b060;color:#7a5a10;}
+.sev-btn.on-3{background:#fdeef3;border-color:#d47090;color:#8a2050;}
+.sev-btn.on-4{background:var(--rose-l);border-color:#c06080;color:#7a1840;}
+.sev-btn.on-5{background:var(--danger-l);border-color:#b04040;color:#601010;}
+.sev-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);}
+.loc-row{display:flex;gap:7px;flex-wrap:wrap;}
+/* view log tabs */
+.view-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1.25rem;}
+.vtab{padding:8px 18px;font-size:14px;cursor:pointer;border:none;background:none;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;font-family:'Jost',sans-serif;transition:color .15s;}
+.vtab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500;}
+.vtab:hover:not(.active){color:var(--text);}
+.view-panel{display:none;}.view-panel.active{display:block;}
+/* by person */
+.person-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;}
+/* trends */
+.trend-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem;}
+.trend-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem;box-shadow:var(--shadow);}
+.trend-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:.75rem;}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.bar-label{font-size:12px;color:var(--text2);min-width:120px;}
+.bar-track{flex:1;height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .4s;}
+.bar-count{font-size:11px;color:var(--text3);min-width:24px;text-align:right;}
+/* daily reflection */
+.ref-session{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:10px;}
+.ref-session-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.ref-session-title{font-size:14px;font-weight:500;color:var(--text);}
+.ref-entries{display:flex;flex-direction:column;gap:7px;}
+.ref-entry-preview{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;}
+.ref-entry-cat{font-size:11px;font-weight:500;padding:2px 8px;border-radius:100px;}
+/* entry card colors by category */
+.ecard.kids{border-left:3px solid var(--rose);}
+.ecard.parenting{border-left:3px solid var(--mauve);}
+.ecard.coparenting{border-left:3px solid var(--amber);}
+.ecard.memories{border-left:3px solid var(--sage);}
+.b-kids{background:var(--rose-l);color:var(--rose);}
+.b-parenting{background:var(--mauve-l);color:var(--mauve);}
+.b-coparenting{background:var(--amber-l);color:var(--amber);}
+.b-memories{background:var(--sage-l);color:var(--sage);}
+.b-source{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.b-loc{background:var(--surface2);color:var(--text3);}
+/* facts/assessment */
+.facts-block{margin-top:8px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius);border-left:2px solid var(--border2);}
+.facts-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:3px;}
+.facts-text{font-size:13px;color:var(--text);line-height:1.6;}
+.assessment-block{margin-top:6px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius);border-left:2px solid var(--mauve);}
+.assessment-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--mauve);margin-bottom:3px;}
+/* habits */
+.habit-list{display:flex;flex-direction:column;gap:8px;}
+.habit-item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+.habit-body{flex:1;}
+.habit-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px;}
+.habit-kids{display:flex;gap:6px;flex-wrap:wrap;}
+.habit-kid{display:flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid var(--border);border-radius:100px;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .12s;user-select:none;}
+.habit-kid:hover{border-color:var(--border2);}
+.habit-kid.done{background:var(--sage-l);border-color:#7abf96;color:#2a6644;}
+/* manage habits list */
+.mh-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--surface);}
+.mh-body{flex:1;}
+.mh-name{font-size:14px;font-weight:500;color:var(--text);}
+.mh-kids{font-size:12px;color:var(--text3);margin-top:2px;}
+</style>
 </head>
 <body>
 
 <header class="hdr">
   <div class="logo">CoParent</div>
-  <div style="margin-left:auto;display:flex;align-items:center;gap:12px;"><span style="font-size:13px;color:rgba(255,255,255,.7);" id="hdr-user"></span><button onclick="signOut()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;font-family:Jost,sans-serif;font-size:13px;padding:5px 14px;border-radius:20px;cursor:pointer;">Sign out</button></div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
+    <span style="font-size:13px;color:rgba(255,255,255,.7);" id="hdr-user"></span>
+    <button onclick="signOut()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;font-family:'Jost',sans-serif;font-size:13px;padding:5px 14px;border-radius:20px;cursor:pointer;">Sign out</button>
+  </div>
 </header>
 
-<!-- LOGIN SCREEN -->
 <!-- LOGIN SCREEN -->
 <div id="screen-login" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 56px);padding:2rem;">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2.5rem;box-shadow:var(--shadow);width:100%;max-width:400px;text-align:center;">
@@ -30,9 +109,8 @@
       <button id="login-btn" class="btn btn-p" onclick="sendMagicLink()" style="flex:1;">Send Magic Link</button>
       <button id="password-toggle-btn" class="btn" onclick="togglePasswordMode()" style="flex:1;">Use Password</button>
     </div>
-    <button id="signin-password-btn" class="btn btn-p" onclick="signInWithPassword()" style="display:none;width:100%;margin-bottom:10px;">Sign In</button>
+    <button id="signin-password-btn" class="btn btn-p" onclick="signInWithPassword()" style="width:100%;display:none;margin-bottom:10px;">Sign In</button>
     <div id="login-err" style="font-size:13px;color:var(--danger);min-height:20px;"></div>
-    <div id="login-info" style="font-size:12px;color:var(--text3);margin-top:6px;display:none;"></div>
   </div>
 </div>
 
@@ -47,9 +125,7 @@
   </div>
 </div>
 
-
-
-
+<!-- APP SCREEN -->
 <div id="screen-app" style="display:none;flex-direction:column;min-height:calc(100vh - 56px);">
 <div class="shell">
 <nav class="sidebar">
@@ -59,20 +135,21 @@
   </div>
   <div class="nav-sec">
     <div class="nav-lbl">Daily</div>
-    <button class="nb" onclick="nav('reflection',this)"><span class="ni">☀</span> Daily Reflection</button>
+    <button class="nb" onclick="nav('reflection',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/></svg></span> Daily Reflection</button>
   </div>
   <div class="nav-sec">
     <div class="nav-lbl">Capture</div>
-    <button class="nb" onclick="nav('incident',this)"><span class="ni">!</span> Incident Capture</button>
-    <button class="nb" onclick="nav('positive',this)"><span class="ni">♡</span> Positive Moments</button>
+    <button class="nb" onclick="nav('capture',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg></span> New Entry</button>
+    <button class="nb" onclick="nav('memories',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg></span> Memories</button>
   </div>
   <div class="nav-sec">
     <div class="nav-lbl">Review</div>
-    <button class="nb" onclick="nav('viewlog',this)"><span class="ni">≡</span> View Log <span class="nc" id="nav-count">0</span></button>
-    <button class="nb" onclick="nav('summary',this)"><span class="ni">◎</span> Summary & Export</button>
+    <button class="nb" onclick="nav('viewlog',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg></span> View Log <span class="nc" id="nav-count">0</span></button>
+    <button class="nb" onclick="nav('export',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg></span> Export</button>
   </div>
   <div class="nav-sec">
-    <div class="nav-lbl">Admin</div>
+    <div class="nav-lbl">Settings</div>
+    <button class="nb" onclick="nav('manage-habits',this)"><span class="ni">✎</span> Manage Habits</button>
     <button class="nb" onclick="nav('settings',this)"><span class="ni">⚙</span> Settings</button>
   </div>
 </nav>
@@ -81,33 +158,50 @@
 
 <!-- DASHBOARD -->
 <div class="pg active" id="pg-dashboard">
-  <div class="dash-greeting" id="dash-greeting">Good morning.</div>
+  <div class="dash-greeting" id="dash-greeting">Good morning!</div>
   <div class="dash-date" id="dash-date"></div>
   <div class="quick-actions">
-    <button class="qa-btn primary" onclick="nav('reflection',document.querySelector('.nb:nth-child(1)'))">
-      <div class="qa-icon">☀</div>
-      <div class="qa-label">Start Daily Reflection</div>
+    <button class="qa-btn primary" onclick="nav('reflection',null)">
+      <div class="qa-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+</svg>
+</div>
+      <div class="qa-label">Daily Reflection</div>
       <div class="qa-sub">Today's guided check-in</div>
     </button>
-    <button class="qa-btn" onclick="nav('incident',null)">
-      <div class="qa-icon">!</div>
-      <div class="qa-label">Log an Incident</div>
-      <div class="qa-sub">Document something that happened</div>
-    </button>
-    <button class="qa-btn" onclick="nav('positive',null)">
-      <div class="qa-icon">♡</div>
-      <div class="qa-label">Positive Moment</div>
-      <div class="qa-sub">Capture something good</div>
+    <button class="qa-btn" onclick="nav('capture',null)">
+      <div class="qa-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+</svg>
+</div>
+      <div class="qa-label">Capture</div>
+      <div class="qa-sub">Log an observation</div>
     </button>
     <button class="qa-btn" onclick="nav('viewlog',null)">
-      <div class="qa-icon">≡</div>
+      <div class="qa-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+</svg>
+</div>
       <div class="qa-label">View Log</div>
       <div class="qa-sub">Browse all entries</div>
     </button>
+    <button class="qa-btn" onclick="nav('memories',null)">
+      <div class="qa-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+</svg>
+</div>
+      <div class="qa-label">Memories</div>
+      <div class="qa-sub">Capture a good moment</div>
+    </button>
+    <button class="qa-btn" onclick="nav('export',null)">
+      <div class="qa-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg></div>
+      <div class="qa-label">Export</div>
+      <div class="qa-sub">Download Data</div>
+    </button>
   </div>
   <div class="card">
-    <div class="ct">Check-In Items</div>
-    <div id="dash-checkins"><div class="empty">No check-in items yet. Add them in Settings.</div></div>
+    <div class="ct">Habits</div>
+    <div id="dash-habits"></div>
   </div>
 </div>
 
@@ -115,23 +209,26 @@
 <div class="pg" id="pg-reflection">
   <h1 class="pg-title">Daily Reflection</h1>
   <p class="pg-sub" id="ref-date-sub"></p>
-  <div class="flow-wrap">
+  <div style="max-width:620px;">
     <div class="flow-progress" id="flow-progress"></div>
 
-    <!-- STEP 0: Logger + date -->
+    <!-- Step 0: Logger -->
     <div class="flow-step active" id="step-0">
       <div class="flow-q">Who's reflecting?</div>
       <div class="card" style="margin-top:.5rem;">
         <div class="logger-row" style="margin-bottom:0;">
           <span>Logging as</span>
-          <select id="ref-logger" onchange="setLogger(this.value)"><option value="Haley">Haley</option><option value="Dave">Dave</option></select>
+          <select id="ref-logger" onchange="setLogger(this.value)">
+            <option value="Haley">Haley</option>
+            <option value="Dave">Dave</option>
+          </select>
           <small>remembered on this device</small>
         </div>
       </div>
       <div class="btn-row"><button class="btn btn-p" onclick="flowNext()">Next →</button></div>
     </div>
 
-    <!-- STEP 1: Kids home? -->
+    <!-- Step 1: Kids home? -->
     <div class="flow-step" id="step-1">
       <div class="flow-q">Were the kids home today?</div>
       <div class="flow-hint">Or were they at mom's, grandparents', etc.?</div>
@@ -141,7 +238,7 @@
       </div>
     </div>
 
-    <!-- STEP 2: Moods -->
+    <!-- Step 2: Kid moods -->
     <div class="flow-step" id="step-2">
       <div class="flow-q">How were the kids today?</div>
       <div class="flow-hint">Select the mood that best describes each kid's overall energy.</div>
@@ -152,10 +249,10 @@
       </div>
     </div>
 
-    <!-- STEP 3: Struggles -->
+    <!-- Step 3: Struggles -->
     <div class="flow-step" id="step-3">
-      <div class="flow-q">Any struggles or difficult moments?</div>
-      <div class="flow-hint">Behavioral issues, emotional moments, anything worth noting per kid.</div>
+      <div class="flow-q">Any struggles or concerns today?</div>
+      <div class="flow-hint">Emotional, behavioral, educational, physical — anything worth noting per kid. Leave blank if none.</div>
       <div id="struggle-sections"></div>
       <div class="btn-row">
         <button class="btn" onclick="flowBack()">← Back</button>
@@ -163,10 +260,10 @@
       </div>
     </div>
 
-    <!-- STEP 4: Positive moments -->
+    <!-- Step 4: Positives -->
     <div class="flow-step" id="step-4">
       <div class="flow-q">Any positive moments today?</div>
-      <div class="flow-hint">Wins, connection, something that made you smile. Optional but good to capture.</div>
+      <div class="flow-hint">Wins, connection, growth, something that made you smile. Leave blank if none.</div>
       <div id="positive-sections"></div>
       <div class="btn-row">
         <button class="btn" onclick="flowBack()">← Back</button>
@@ -174,46 +271,45 @@
       </div>
     </div>
 
-    <!-- STEP 5: Mary -->
+    <!-- Step 5: Mary contact? -->
     <div class="flow-step" id="step-5">
-      <div class="flow-q">Any communication or interaction with Mary today?</div>
+      <div class="flow-q">Any communication with Mary today?</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:.5rem;">
         <button class="btn btn-p" onclick="setMaryContact(true)">Yes</button>
         <button class="btn" onclick="setMaryContact(false)">No</button>
       </div>
     </div>
 
-    <!-- STEP 6: Mary feelings -->
+    <!-- Step 6: Mary details -->
     <div class="flow-step" id="step-6">
-      <div class="flow-q">How did the communication/interaction go?</div>
-      <div class="flow-hint">Rate the interaction and note how it made you feel.</div>
+      <div class="flow-q">How did the communication go?</div>
       <div class="card">
-        <div class="ct">Interaction Quality</div>
+        <div class="ct">Interaction Quality (1 = Distressing, 5 = Pleasant)</div>
         <div class="lk-track" id="mary-likert">
-          <button class="lk-btn" onclick="setMaryLikert(1,this)">1<br><span style="font-size:10px;font-weight:400">Pleasant</span></button>
-          <button class="lk-btn" onclick="setMaryLikert(2,this)">2<br><span style="font-size:10px;font-weight:400">Neutral</span></button>
+          <button class="lk-btn" onclick="setMaryLikert(1,this)">1<br><span style="font-size:10px;font-weight:400">Distressing</span></button>
+          <button class="lk-btn" onclick="setMaryLikert(2,this)">2<br><span style="font-size:10px;font-weight:400">Difficult</span></button>
           <button class="lk-btn" onclick="setMaryLikert(3,this)">3<br><span style="font-size:10px;font-weight:400">Tense</span></button>
-          <button class="lk-btn" onclick="setMaryLikert(4,this)">4<br><span style="font-size:10px;font-weight:400">Difficult</span></button>
-          <button class="lk-btn" onclick="setMaryLikert(5,this)">5<br><span style="font-size:10px;font-weight:400">Distressing</span></button>
+          <button class="lk-btn" onclick="setMaryLikert(4,this)">4<br><span style="font-size:10px;font-weight:400">Neutral</span></button>
+          <button class="lk-btn" onclick="setMaryLikert(5,this)">5<br><span style="font-size:10px;font-weight:400">Pleasant</span></button>
         </div>
       </div>
-      <div class="card">
+            <div class="card">
         <div class="ct">How Did It Make You Feel?</div>
         <div class="feelings-wrap" id="feelings-wrap"></div>
       </div>
-            <div class="card">
+      <div class="card">
         <div class="ct">How Did She Treat the Kids?</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="mary-kids-treatment">
-          <div class="kchip" onclick="setMaryKidsTreatment('Warm', this)">Warm</div>
-          <div class="kchip" onclick="setMaryKidsTreatment('Neutral', this)">Neutral</div>
-          <div class="kchip" onclick="setMaryKidsTreatment('Dismissive', this)">Dismissive</div>
-          <div class="kchip" onclick="setMaryKidsTreatment('Cold', this)">Cold</div>
-          <div class="kchip" onclick="setMaryKidsTreatment('Not present', this)">Not present</div>
+        <div class="kids-row" id="mary-treatment-row">
+          <div class="kchip" onclick="setMaryTreatment('Warm',this)">Extra Nice</div>
+          <div class="kchip" onclick="setMaryTreatment('Neutral',this)">Warm</div>
+          <div class="kchip" onclick="setMaryTreatment('Dismissive',this)">Neutral</div>
+          <div class="kchip" onclick="setMaryTreatment('Cold',this)">Dismissive</div>
+          <div class="kchip" onclick="setMaryTreatment('Not present',this)">Cold</div>
         </div>
       </div>
       <div class="card">
         <div class="fg1">
-          <label class="fgl">Notes about the interaction (optional)</label>
+          <label class="fgl">Notes (optional)</label>
           <textarea id="mary-notes" placeholder="What happened, what was said, context..."></textarea>
         </div>
       </div>
@@ -223,11 +319,11 @@
       </div>
     </div>
 
-    <!-- STEP 7: Review & save -->
+    <!-- Step 7: Review -->
     <div class="flow-step" id="step-7">
-      <div class="flow-q">Ready to save today's reflection?</div>
-      <div class="flow-hint">Here's a summary of what you've captured.</div>
-      <div class="card" id="review-summary"></div>
+      <div class="flow-q">Review today's reflection</div>
+      <div class="flow-hint">Here's what you've captured. Save to add these entries to the log.</div>
+      <div id="reflection-preview"></div>
       <div class="btn-row">
         <button class="btn" onclick="flowBack()">← Back</button>
         <button class="btn btn-p" onclick="saveReflection()">Save Reflection</button>
@@ -235,245 +331,313 @@
       <div class="toast t-ok" id="ref-ok"></div>
       <div class="toast t-err" id="ref-err"></div>
     </div>
-
   </div>
 </div>
 
-<!-- INCIDENT CAPTURE -->
-<div class="pg" id="pg-incident">
-  <h1 class="pg-title">Incident Capture</h1>
-  <p class="pg-sub">Document incidents as soon as possible. Specificity and timing matter.</p>
+<!-- NEW ENTRY (CAPTURE) -->
+<div class="pg" id="pg-capture">
+  <h1 class="pg-title">New Entry</h1>
+  <p class="pg-sub">Log an observation, incident, or moment.</p>
+
   <div class="card">
     <div class="logger-row">
       <span>Logging as</span>
-      <select id="inc-logger" onchange="setLogger(this.value)"><option value="Haley">Haley</option><option value="Dave">Dave</option></select>
+      <select id="cap-logger" onchange="setLogger(this.value)">
+        <option value="Haley">Haley</option>
+        <option value="Dave">Dave</option>
+      </select>
       <small>remembered on this device</small>
     </div>
-    <div class="ct">Basic Info</div>
     <div class="fg">
       <div class="fg1">
         <label class="fgl">Date & Time</label>
-        <input type="datetime-local" id="inc-date"/>
+        <input type="datetime-local" id="cap-date"/>
       </div>
       <div class="fg1">
-      <label class="fgl">Who Was Involved?</label>
-<div class="kids-row">
-  <div class="kchip" id="ick-Mary" onclick="toggleKid('inc','Mary')">Mary</div>
-  <div class="kchip" id="ick-Landon" onclick="toggleKid('inc','Landon')">Landon</div>
-  <div class="kchip" id="ick-Luke" onclick="toggleKid('inc','Luke')">Luke</div>
-  <div class="kchip" id="ick-Leo" onclick="toggleKid('inc','Leo')">Leo</div>
-  <div class="kchip" id="ick-All" onclick="toggleKid('inc','All')">All three</div>
-  <div class="kchip" id="ick-Haley" onclick="toggleKid('inc','Haley')">Haley</div>
-  <div class="kchip" id="ick-Dave" onclick="toggleKid('inc','Dave')">Dave</div>
-</div>
-      </div>
-      <div class="fg1 full">
-        <label class="fgl">Best-Interest Factor (MCL 722.23)</label>
-        <select id="inc-factor" onchange="updateHint()">
-          <option value="">Select the most relevant factor...</option>
-          <option value="(A) Emotional bond">(A) Emotional bond & love</option>
-          <option value="(B) Guidance & education">(B) Guidance, education & religion</option>
-          <option value="(C) Material & medical needs">(C) Food, clothing, medical care</option>
-          <option value="(D) Stable environment">(D) Stable, satisfactory environment</option>
-          <option value="(E) Permanence of home">(E) Permanence of family unit</option>
-          <option value="(F) Moral fitness">(F) Moral fitness</option>
-          <option value="(G) Mental & physical health">(G) Mental & physical health</option>
-          <option value="(H) School & community record">(H) Home, school & community record</option>
-          <option value="(I) Child's preference">(I) Child's expressed preference</option>
-          <option value="(J) Co-parenting cooperation">(J) Co-parenting / boundary violations</option>
-          <option value="(K) Domestic violence">(K) Domestic violence / emotional abuse</option>
-          <option value="(L) Other relevant factor">(L) Other relevant factor</option>
+        <label class="fgl">Location</label>
+        <select id="cap-location">
+          <option value="">Select location...</option>
         </select>
-        <div class="fhint" id="inc-hint"></div>
       </div>
     </div>
   </div>
+
+  <div class="card">
+    <div class="ct">Category</div>
+    <div class="cat-grid" id="cat-grid"></div>
+    <div class="fg1" id="type-wrap" style="display:none;margin-top:4px;">
+      <label class="fgl">Type</label>
+      <select id="cap-type"></select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Who Was Involved?</div>
+    <div class="kids-row" id="cap-people"></div>
+  </div>
+
+  <div class="card" id="source-card">
+    <div class="ct">Information Source</div>
+    <div class="source-row" id="cap-source"></div>
+  </div>
+
   <div class="card">
     <div class="ct">What Happened</div>
-    <div class="fg">
-      <div class="fg1 full">
-        <label class="fgl">Description</label>
-        <textarea id="inc-incident" placeholder="Describe objectively — setting, who was present, exactly what was said or done, visible emotional responses."></textarea>
-      </div>
-      <div class="fg1 full">
-        <label class="fgl">Direct Quotes (if any)</label>
-        <textarea id="inc-quote" style="min-height:58px;" placeholder='e.g. Luke said unprompted: "I want to live here 80% of the time."'></textarea>
-      </div>
-      <div class="fg1 full">
-        <label class="fgl">Witnesses</label>
-        <input type="text" id="inc-witnesses" placeholder="e.g. Dave present, teacher Mrs. Johnson"/>
-      </div>
+    <div class="fg1" style="margin-bottom:12px;">
+      <label class="fgl">Facts <span style="font-size:11px;color:var(--text3);font-weight:400;">— what objectively happened</span></label>
+      <textarea id="cap-facts" placeholder="Stick to observable facts. What was said, what was done, times, what you saw or heard. No interpretation here."></textarea>
+    </div>
+    <div class="fg1" style="margin-bottom:12px;">
+      <label class="fgl">Our Assessment <span style="font-size:11px;color:var(--text3);font-weight:400;">— your interpretation (optional)</span></label>
+      <textarea id="cap-assessment" placeholder="What do you think this means? How did it feel? What pattern does this fit? Clearly labeled as your perspective."></textarea>
+    </div>
+    <div class="fg1">
+      <label class="fgl">Direct Quotes (if any)</label>
+      <textarea id="cap-quote" style="min-height:60px;" placeholder='e.g. Luke said unprompted: "I want to live here 80% of the time."'></textarea>
     </div>
   </div>
+
+  <div class="card" id="severity-card">
+    <div class="ct">Severity / Significance</div>
+    <div class="severity-wrap">
+      <div class="sev-track" id="cap-severity"></div>
+      <div class="sev-labels"><span>1 — Lowest severity</span><span>5 — Highest severity</span></div>
+    </div>
+    <div class="fhint" style="margin-top:6px;" id="sev-hint"></div>
+  </div>
+
   <div class="card">
-    <div class="ct">Child Distress Level</div>
-    <div class="lk-track" id="inc-distress">
-      <button class="lk-btn" onclick="setDistress(1,this)">1<br><span style="font-size:10px;font-weight:400">None</span></button>
-      <button class="lk-btn" onclick="setDistress(2,this)">2<br><span style="font-size:10px;font-weight:400">Mild</span></button>
-      <button class="lk-btn" onclick="setDistress(3,this)">3<br><span style="font-size:10px;font-weight:400">Moderate</span></button>
-      <button class="lk-btn" onclick="setDistress(4,this)">4<br><span style="font-size:10px;font-weight:400">High</span></button>
-      <button class="lk-btn" onclick="setDistress(5,this)">5<br><span style="font-size:10px;font-weight:400">Severe</span></button>
+    <div class="fg1" style="margin-bottom:12px;">
+      <label class="fgl">Witnesses (optional)</label>
+      <input type="text" id="cap-witnesses" placeholder="e.g. Dave present, teacher Mrs. Johnson"/>
+    </div>
+    <div class="fg1">
+      <label class="fgl">Attachments</label>
+      <div class="att-zone" onclick="document.getElementById('cap-files').click()">
+        <p>Click to attach files</p>
+        <small>Screenshots, texts, emails, photos, school records</small>
+        <input type="file" id="cap-files" multiple style="display:none" onchange="handleFiles(this.files)"/>
+      </div>
+      <div class="att-list" id="cap-att-list"></div>
     </div>
   </div>
-  <div class="card">
-    <div class="ct">Tags</div>
-    <div class="tags-wrap" id="inc-tags"></div>
-    <div class="fhint" style="margin-top:8px;">Select all that apply. Manage tags in Settings.</div>
-  </div>
-  <div class="card">
-    <div class="ct">Attachments</div>
-    <div class="att-zone" onclick="document.getElementById('inc-files').click()">
-      <p>Click to attach files</p>
-      <small>Screenshots, texts, emails, school records, photos</small>
-      <input type="file" id="inc-files" multiple style="display:none" onchange="handleFiles('inc',this.files)"/>
-    </div>
-    <div class="att-list" id="inc-att-list"></div>
-  </div>
-  
+
   <div class="btn-row">
-    <button class="btn" onclick="clearIncident()">Clear</button>
-    <button class="btn btn-p" onclick="saveIncident()">Save Incident</button>
+    <button class="btn" onclick="clearCapture()">Clear</button>
+    <button class="btn btn-p" onclick="saveEntry()">Save Entry</button>
   </div>
-  <div class="toast t-ok" id="inc-ok"></div>
-  <div class="toast t-err" id="inc-err"></div>
+  <div class="toast t-ok" id="cap-ok"></div>
+  <div class="toast t-err" id="cap-err"></div>
 </div>
 
-<!-- POSITIVE MOMENTS -->
-<div class="pg" id="pg-positive">
-  <h1 class="pg-title">Memories & Positive Moments</h1>
-  <p class="pg-sub">Log the good stuff. A balanced record is a credible record.</p>
+<!-- MEMORIES -->
+<div class="pg" id="pg-memories">
+  <h1 class="pg-title">Positive Moments & Memories</h1>
+  <p class="pg-sub">Milestones, wins, funny moments, and good stuff worth remembering.</p>
+
   <div class="card">
     <div class="logger-row">
       <span>Logging as</span>
-      <select id="pos-logger" onchange="setLogger(this.value)"><option value="Haley">Haley</option><option value="Dave">Dave</option></select>
+      <select id="mem-logger" onchange="setLogger(this.value)">
+        <option value="Haley">Haley</option>
+        <option value="Dave">Dave</option>
+      </select>
       <small>remembered on this device</small>
     </div>
-    <div class="fg">
-      <div class="fg1">
-        <label class="fgl">Date & Time</label>
-        <input type="datetime-local" id="pos-date"/>
+    <div class="fg1">
+      <label class="fgl">Date & Time</label>
+      <input type="datetime-local" id="mem-date"/>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Type of Memory</div>
+    <div class="fg1">
+      <select id="mem-type">
+        <option value="">Select type...</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Who Was Involved?</div>
+    <div class="kids-row" id="mem-people"></div>
+  </div>
+
+  <div class="card">
+    <div class="ct">The Memory</div>
+    <div class="fg1" style="margin-bottom:12px;">
+      <label class="fgl">What happened</label>
+      <textarea id="mem-facts" placeholder="Describe the moment — what happened, what made it special."></textarea>
+    </div>
+    <div class="fg1">
+      <label class="fgl">Direct Quote (if any)</label>
+      <textarea id="mem-quote" style="min-height:60px;" placeholder='e.g. Leo said: "This is the best day ever."'></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="fg1">
+      <label class="fgl">Photos & Attachments</label>
+      <div class="att-zone" onclick="document.getElementById('mem-files').click()">
+        <p>Click to attach files</p>
+        <small>Photos, screenshots, videos, documents</small>
+        <input type="file" id="mem-files" multiple style="display:none" onchange="handleMemFiles(this.files)"/>
       </div>
-      <div class="fg1">
-<label class="fgl">Who Was Involved?</label>
-<div class="kids-row">
-  <div class="kchip" id="ick-Landon" onclick="toggleKid('inc','Landon')">Landon</div>
-  <div class="kchip" id="ick-Luke" onclick="toggleKid('inc','Luke')">Luke</div>
-  <div class="kchip" id="ick-Leo" onclick="toggleKid('inc','Leo')">Leo</div>
-  <div class="kchip" id="ick-All" onclick="toggleKid('inc','All')">All three</div>
-  <div class="kchip" id="ick-Haley" onclick="toggleKid('inc','Haley')">Haley</div>
-  <div class="kchip" id="ick-Dave" onclick="toggleKid('inc','Dave')">Dave</div>
+      <div class="att-list" id="mem-att-list"></div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" onclick="clearMemory()">Clear</button>
+    <button class="btn btn-p" onclick="saveMemory()">Save Memory</button>
+  </div>
+  <div class="toast t-ok" id="mem-ok"></div>
+  <div class="toast t-err" id="mem-err"></div>
 </div>
+
+<!-- SETTINGS -->
+<div class="pg" id="pg-settings">
+  <h1 class="pg-title">Settings</h1>
+  <p class="pg-sub">Customize the app to your liking.</p>
+  <div class="card">
+    <div class="ct">Theme</div>
+    <div class="theme-grid">
+      <div class="theme-swatch" id="swatch-rose" onclick="applyTheme('rose')">
+        <div class="swatch-dot" style="background:linear-gradient(135deg,#c4507a,#d480a0);"></div>
+        <div class="swatch-name">Rose</div>
+        <div class="swatch-check" id="check-rose"></div>
       </div>
-      <div class="fg1 full">
-        <label class="fgl">What happened?</label>
-        <textarea id="pos-body" placeholder="A good moment, a breakthrough, something that made you proud..."></textarea>
+      <div class="theme-swatch" id="swatch-sage" onclick="applyTheme('sage')">
+        <div class="swatch-dot" style="background:linear-gradient(135deg,#4a8a68,#60a880);"></div>
+        <div class="swatch-name">Sage</div>
+        <div class="swatch-check" id="check-sage"></div>
       </div>
-      <div class="fg1 full">
-        <label class="fgl">Direct Quote (if any)</label>
-        <textarea id="pos-quote" style="min-height:58px;" placeholder='e.g. Leo said: "I feel safe here."'></textarea>
+      <div class="theme-swatch" id="swatch-slate" onclick="applyTheme('slate')">
+        <div class="swatch-dot" style="background:linear-gradient(135deg,#5070a8,#7090c0);"></div>
+        <div class="swatch-name">Slate</div>
+        <div class="swatch-check" id="check-slate"></div>
+      </div>
+      <div class="theme-swatch" id="swatch-amber" onclick="applyTheme('amber')">
+        <div class="swatch-dot" style="background:linear-gradient(135deg,#c07828,#d89840);"></div>
+        <div class="swatch-name">Amber</div>
+        <div class="swatch-check" id="check-amber"></div>
+      </div>
+      <div class="theme-swatch" id="swatch-plum" onclick="applyTheme('plum')">
+        <div class="swatch-dot" style="background:linear-gradient(135deg,#7a4090,#9860a8);"></div>
+        <div class="swatch-name">Plum</div>
+        <div class="swatch-check" id="check-plum"></div>
       </div>
     </div>
-    <div class="btn-row" style="margin-top:14px;">
-      <button class="btn" onclick="clearPositive()">Clear</button>
-      <button class="btn btn-p" onclick="savePositive()">Save Moment</button>
+  </div>
+</div>
+
+<!-- MANAGE HABITS -->
+<div class="pg" id="pg-manage-habits">
+  <h1 class="pg-title">Manage Habits</h1>
+  <p class="pg-sub">Add or remove daily habits. Changes show up on the dashboard immediately.</p>
+
+  <div class="card">
+    <div class="ct">Add a Habit</div>
+    <div class="fg1" style="margin-bottom:12px;">
+      <label class="fgl">Habit Name</label>
+      <input type="text" id="new-habit-name" placeholder="e.g. Reading for 20 minutes"/>
     </div>
-    <div class="toast t-ok" id="pos-ok"></div>
-    <div class="toast t-err" id="pos-err"></div>
+    <div class="fg1" style="margin-bottom:12px;">
+      <label class="fgl">Kids</label>
+      <div class="kids-row" id="new-habit-kids"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-p" onclick="addHabit()">Add Habit</button>
+    </div>
+    <div class="toast t-ok" id="mh-ok"></div>
+    <div class="toast t-err" id="mh-err"></div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Current Habits</div>
+    <div id="habits-manage-list"><div class="empty">Loading...</div></div>
   </div>
 </div>
 
 <!-- VIEW LOG -->
 <div class="pg" id="pg-viewlog">
   <h1 class="pg-title">View Log</h1>
-  <p class="pg-sub">All entries across all pages, newest first.</p>
-  <div class="filter-bar">
-    <button class="fpill active" onclick="setFilter('all',this)">All</button>
-    <button class="fpill" onclick="setFilter('incident',this)">Incidents</button>
-    <button class="fpill" onclick="setFilter('positive',this)">Positive</button>
-    <button class="fpill" onclick="setFilter('reflection',this)">Reflections</button>
-    <button class="fpill" onclick="setFilter('Landon',this)">Landon</button>
-    <button class="fpill" onclick="setFilter('Luke',this)">Luke</button>
-    <button class="fpill" onclick="setFilter('Leo',this)">Leo</button>
-    <button class="fpill" onclick="setFilter('Haley',this)">By Haley</button>
-    <button class="fpill" onclick="setFilter('Dave',this)">By Dave</button>
+  <div class="view-tabs">
+    <button class="vtab active" onclick="switchViewTab('feed',this)">Feed</button>
+    <button class="vtab" onclick="switchViewTab('byperson',this)">By Person</button>
+    <button class="vtab" onclick="switchViewTab('trends',this)">Trends</button>
   </div>
-  <div id="entries-list"><div class="empty">Loading...</div></div>
+
+  <!-- FEED -->
+  <div class="view-panel active" id="vp-feed">
+    <div class="filter-bar" id="feed-filters">
+      <button class="fpill active" onclick="setFilter('all',this)">All</button>
+      <button class="fpill" onclick="setFilter('kids',this)">Kids</button>
+      <button class="fpill" onclick="setFilter('parenting',this)">Parenting</button>
+      <button class="fpill" onclick="setFilter('coparenting',this)">Co-Parenting</button>
+      <button class="fpill" onclick="setFilter('memories',this)">Memories</button>
+      <button class="fpill" onclick="setFilter('reflection',this)">Reflections</button>
+      <button class="fpill" onclick="setFilter('Haley',this)">By Haley</button>
+      <button class="fpill" onclick="setFilter('Dave',this)">By Dave</button>
+    </div>
+    <div id="entries-list"><div class="empty">Loading...</div></div>
+  </div>
+
+  <!-- BY PERSON -->
+  <div class="view-panel" id="vp-byperson">
+    <div class="person-tabs" id="person-tabs"></div>
+    <div id="person-entries"><div class="empty">Select a person above.</div></div>
+  </div>
+
+  <!-- TRENDS -->
+  <div class="view-panel" id="vp-trends">
+    <div class="trend-grid" id="trends-grid"></div>
+  </div>
 </div>
 
-<!-- SUMMARY -->
-<div class="pg" id="pg-summary">
-  <h1 class="pg-title">Summary & Export</h1>
-  <p class="pg-sub">Overview of your documentation. Export anytime for your attorney.</p>
-  <div class="stats-row">
-    <div class="sbox"><div class="slbl">Total Entries</div><div class="snum" id="s-total">—</div></div>
-    <div class="sbox"><div class="slbl">Incidents</div><div class="snum" id="s-inc">—</div></div>
-    <div class="sbox"><div class="slbl">Positive</div><div class="snum" id="s-pos">—</div></div>
-    <div class="sbox"><div class="slbl">Flagged</div><div class="snum" id="s-flag">—</div></div>
-  </div>
-  <div class="export-card">
-    <h3>Export for Attorney</h3>
-    <p>Organized by best-interest factor. Flagged entries surface first. Copy and paste into a doc for your attorney.</p>
-    <button class="btn btn-p" onclick="genExport()">Generate Export</button>
-    <textarea class="exp-ta" id="exp-text" style="display:none;"></textarea>
-    <div style="font-size:11px;color:var(--text3);margin-top:5px;display:none;" id="copy-hint">Select all (Ctrl/Cmd+A) then copy (Ctrl/Cmd+C)</div>
-  </div>
-</div>
-
-<!-- SETTINGS -->
-<div class="pg" id="pg-settings">
-  <h1 class="pg-title">Settings</h1>
-  <p class="pg-sub">Manage tags, feelings, and check-in items.</p>
-
+<!-- EXPORT -->
+<div class="pg" id="pg-export">
+  <h1 class="pg-title">Export</h1>
+  <p class="pg-sub">Generate a report for your attorney or for your own review.</p>
   <div class="card">
-    <div class="set-title">Tags & Labels</div>
-    <div class="set-sub">Used on Incident Capture and Positive Moments.</div>
-    <div class="set-list" id="tag-set-list"></div>
-    <div class="set-add-row">
-      <input type="text" id="new-tag-name" placeholder="Tag name..."/>
-      <select id="new-tag-type">
-        <option value="general">General</option>
-        <option value="coparent">Co-parent</option>
-        <option value="preference">Preference</option>
-        <option value="positive">Positive</option>
-      </select>
-      <button class="btn btn-sm btn-p" onclick="addTag()">Add</button>
+    <div class="ct">Filter Export</div>
+    <div class="fg">
+      <div class="fg1">
+        <label class="fgl">Date range — from</label>
+        <input type="date" id="exp-from"/>
+      </div>
+      <div class="fg1">
+        <label class="fgl">Date range — to</label>
+        <input type="date" id="exp-to"/>
+      </div>
+      <div class="fg1 full">
+        <label class="fgl">Categories to include</label>
+        <div class="kids-row" id="exp-cats">
+          <div class="kchip on" id="expcat-kids" onclick="toggleExpCat('kids',this)">Kids</div>
+          <div class="kchip on" id="expcat-parenting" onclick="toggleExpCat('parenting',this)">Parenting</div>
+          <div class="kchip on" id="expcat-coparenting" onclick="toggleExpCat('coparenting',this)">Co-Parenting</div>
+          <div class="kchip" id="expcat-memories" onclick="toggleExpCat('memories',this)">Positive Moments & Memories</div>
+          <div class="kchip on" id="expcat-reflection" onclick="toggleExpCat('reflection',this)">Reflections</div>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:8px;">
+      <button class="btn btn-p" onclick="genExport()">Generate Export</button>
     </div>
   </div>
-
-  <div class="card">
-    <div class="set-title">Feelings List</div>
-    <div class="set-sub">Shown during the Daily Reflection when Mary contact is logged.</div>
-    <div class="set-list" id="feelings-set-list"></div>
-    <div class="set-add-row">
-      <input type="text" id="new-feeling" placeholder="Add a feeling..."/>
-      <button class="btn btn-sm btn-p" onclick="addFeeling()">Add</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="set-title">Check-In Items</div>
-    <div class="set-sub">Shown on the dashboard. Highlight overdue items from yesterday's reflection.</div>
-    <div class="set-list" id="ci-set-list"></div>
-    <div class="set-add-row">
-      <input type="text" id="new-ci-name" placeholder="Topic or item..."/>
-      <select id="new-ci-freq">
-        <option value="daily">Daily</option>
-        <option value="weekly">Weekly</option>
-        <option value="biweekly">Biweekly</option>
-        <option value="monthly">Monthly</option>
-        <option value="once">One-time</option>
-      </select>
-      <input type="text" id="new-ci-who" placeholder="Who (e.g. Haley)" style="max-width:120px;"/>
-      <button class="btn btn-sm btn-p" onclick="addCheckIn()">Add</button>
-    </div>
+  <div id="exp-output" style="display:none;">
+    <textarea class="exp-ta" id="exp-text" style="width:100%;"></textarea>
+    <div style="font-size:11px;color:var(--text3);margin-top:5px;">Select all (Ctrl/Cmd+A) then copy (Ctrl/Cmd+C)</div>
   </div>
 </div>
 
 </main>
 </div>
-
+</div><!-- end screen-app -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
