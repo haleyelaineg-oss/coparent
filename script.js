@@ -1,6 +1,12 @@
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
 const { createClient } = supabase;
-const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    detectSessionInUrl: true,
+    autoRefreshToken: true,
+  },
+});
 
 // ── AUTH STATE ────────────────────────────────────────────────────────────────
 var currentUser = null;
@@ -59,9 +65,10 @@ async function sendMagicLink() {
   }
   btn.textContent = 'Sending...';
   btn.disabled = true;
+  var redirectTo = window.location.origin + window.location.pathname;
   var { error } = await sb.auth.signInWithOtp({
     email: email,
-    options: { emailRedirectTo: window.location.href },
+    options: { emailRedirectTo: redirectTo },
   });
   if (error) {
     err.textContent = 'Error: ' + error.message;
@@ -135,12 +142,24 @@ async function initAuth() {
   if (session) { currentUser = session.user; onAuthenticated(); }
   else showScreen('screen-login');
   sb.auth.onAuthStateChange(function (event, session) {
-    if (event === 'SIGNED_IN' && session) { currentUser = session.user; onAuthenticated(); }
-    else if (event === 'SIGNED_OUT') { currentUser = null; showScreen('screen-login'); }
+    if (event === 'SIGNED_IN' && session) {
+      currentUser = session.user;
+      onAuthenticated();
+    } else if (event === 'SIGNED_OUT') {
+      if (currentUser) {
+        currentUser = null;
+        showScreen('screen-login');
+      }
+    }
   });
 }
 
 function onAuthenticated() {
+  // Prevent app content from being navigated back to the login state after successful auth
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   var name = getLoggerName(currentUser.email);
   ls('logger', name);
   var el = document.getElementById('hdr-user');
@@ -691,13 +710,21 @@ function buildMoodSections() {
   document.getElementById('mood-sections').innerHTML = KIDS_LIST.map(function (kid) {
     return '<div class="kid-section"><div class="kid-section-name">' + kid + '</div>' +
       '<div class="mood-row">' + MOODS.map(function (m) {
-        return '<div class="mood-opt' + (flowMoods[kid] === m.label ? ' on' : '') + '" onclick="setMood(\'' + kid + '\',\'' + m.label + '\')">' +
+        var selected = Array.isArray(flowMoods[kid]) && flowMoods[kid].includes(m.label);
+        return '<div class="mood-opt' + (selected ? ' on' : '') + '" onclick="setMood(\'' + kid + '\',\'' + m.label + '\')">' +
           '<div class="mood-icon">' + m.emoji + '</div><div class="mood-lbl">' + m.label + '</div></div>';
       }).join('') + '</div></div>';
   }).join('');
 }
 
-function setMood(kid, mood) { flowMoods[kid] = mood; buildMoodSections(); }
+function setMood(kid, mood) {
+  if (!flowMoods[kid]) flowMoods[kid] = [];
+  var idx = flowMoods[kid].indexOf(mood);
+  if (idx === -1) flowMoods[kid].push(mood);
+  else flowMoods[kid].splice(idx, 1);
+  if (!flowMoods[kid].length) delete flowMoods[kid];
+  buildMoodSections();
+}
 
 function buildStruggleSections() {
   var KIDS_LIST = ['Landon', 'Luke', 'Leo'];
@@ -739,7 +766,9 @@ function buildReflectionPreview() {
   } else {
     html += '<div class="card" style="margin-bottom:8px;"><div class="ct">Moods</div>' +
       KIDS_LIST.map(function (k) {
-        return '<div style="font-size:14px;color:var(--text);margin-bottom:4px;"><strong>' + k + ':</strong> ' + (flowMoods[k] || 'Not recorded') + '</div>';
+        var mood = flowMoods[k];
+        if (Array.isArray(mood)) mood = mood.length ? mood.join(', ') : 'Not recorded';
+        return '<div style="font-size:14px;color:var(--text);margin-bottom:4px;"><strong>' + k + ':</strong> ' + (mood || 'Not recorded') + '</div>';
       }).join('') + '</div>';
 
     var hasStruggles = KIDS_LIST.some(function (k) { return flowStruggles[k]; });
@@ -896,8 +925,12 @@ function renderEntryCard(e) {
     var parts = [];
     if (e.kids_home === false) { parts.push('Kids not home.'); }
     else {
-      var moodStr = KIDS_LIST.filter(function (k) { return e.moods && e.moods[k]; })
-        .map(function (k) { return k + ': ' + e.moods[k]; }).join(' · ');
+      var moodStr = KIDS_LIST.filter(function (k) { return e.moods && e.moods[k] && e.moods[k].length; })
+        .map(function (k) { 
+          var m = e.moods[k];
+          if (Array.isArray(m)) m = m.join(', ');
+          return k + ': ' + m;
+        }).join(' · ');
       if (moodStr) parts.push('Moods — ' + moodStr);
       var struggles = KIDS_LIST.filter(function (k) { return e.struggles && e.struggles[k]; })
         .map(function (k) { return k + ': ' + e.struggles[k]; }).join(' | ');
