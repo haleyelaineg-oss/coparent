@@ -25,6 +25,20 @@ var capSource = '';
 var capCategory = '';
 var capSeverity = 0;
 var capPatterns = [];
+
+// Health form state
+var healthKid = '';
+var healthSymptoms = [];
+var healthMeds = [];
+var healthMedsNone = false;
+var healthMissedSchool = false;
+var healthMissedActivity = false;
+var healthRecovery = '';
+var healthCareProvider = '';
+var healthTransition = false;
+var healthDoctorVisit = false;
+var healthSeverity = 0;
+var healthAtts = [];
 var capAtts = [];
 
 // Daily reflection state
@@ -178,7 +192,7 @@ function onAuthenticated() {
 // ── LOGGER ────────────────────────────────────────────────────────────────────
 function setLogger(v) {
   ls('logger', v);
-  ['ref-logger', 'cap-logger', 'mem-logger'].forEach(function (id) {
+  ['ref-logger', 'cap-logger', 'mem-logger', 'health-logger', 'op-logger'].forEach(function (id) {
     var el = document.getElementById(id);
     if (el) el.value = v;
   });
@@ -186,7 +200,7 @@ function setLogger(v) {
 
 function loadLogger() {
   var v = ls('logger') || 'Haley';
-  ['ref-logger', 'cap-logger', 'mem-logger'].forEach(function (id) {
+  ['ref-logger', 'cap-logger', 'mem-logger', 'health-logger', 'op-logger'].forEach(function (id) {
     var el = document.getElementById(id);
     if (el) el.value = v;
   });
@@ -203,7 +217,10 @@ function nav(page, btn) {
   if (page === 'reflection') initFlow();
   if (page === 'dashboard') renderDashboard();
   if (page === 'capture') { setNow('cap-date'); loadLogger(); }
+  if (page === 'health') initHealthPage();
   if (page === 'memories') initMemoriesPage();
+  if (page === 'our-parenting') initOurParentingPage();
+  if (page === 'our-parenting-log') initOpLog();
   if (page === 'manage-habits') initManageHabits();
   if (page === 'manage-patterns') initManagePatterns();
   if (page === 'settings') renderThemePicker();
@@ -710,6 +727,461 @@ async function saveMemory() {
   await saveToSupabase(entry, 'mem');
 }
 
+// ── HEALTH & MEDICAL ──────────────────────────────────────────────────────────
+function initHealthPage() {
+  healthKid = ''; healthSymptoms = []; healthMeds = []; healthMedsNone = false;
+  healthMissedSchool = false; healthMissedActivity = false;
+  healthRecovery = ''; healthCareProvider = ''; healthTransition = false;
+  healthDoctorVisit = false; healthSeverity = 0; healthAtts = [];
+  setNow('health-date');
+  loadLogger();
+
+  // Kid chips — single select
+  var kidEl = document.getElementById('health-kid-row');
+  if (kidEl) kidEl.innerHTML = KIDS.map(function (k) {
+    return '<div class="kchip" id="hkchip-' + k + '" onclick="toggleHealthKid(\'' + k + '\')">' + k + '</div>';
+  }).join('');
+
+  // Symptom chips
+  var sympEl = document.getElementById('health-symptom-chips');
+  if (sympEl) sympEl.innerHTML = HEALTH_SYMPTOMS.map(function (s) {
+    var id = s.replace(/\s+/g, '-').toLowerCase();
+    return '<div class="kchip" id="hsymp-' + id + '" onclick="toggleHealthSymptom(\'' + s + '\')">' + s + '</div>';
+  }).join('');
+  var sevEl = document.getElementById('health-symptom-severities');
+  if (sevEl) sevEl.innerHTML = '';
+
+  // Severity track
+  var strack = document.getElementById('health-severity-track');
+  if (strack) strack.innerHTML = [1,2,3,4,5].map(function (n) {
+    return '<button class="sev-btn" id="hsevbtn-' + n + '" onclick="setHealthSeverity(' + n + ')">' + n + '</button>';
+  }).join('');
+  var hint = document.getElementById('health-sev-hint');
+  if (hint) hint.textContent = '';
+
+  // Care provider chips
+  var careEl = document.getElementById('health-care-row');
+  if (careEl) careEl.innerHTML = HEALTH_CARE_PROVIDERS.map(function (p) {
+    return '<div class="kchip" id="hcare-' + p + '" onclick="setHealthCareProvider(\'' + p + '\')">' + p + '</div>';
+  }).join('');
+
+  // Reset toggles
+  var chip = document.getElementById('health-meds-none-chip');
+  if (chip) chip.classList.remove('on');
+  document.getElementById('health-meds-none-section').style.display = 'none';
+  document.getElementById('health-meds-none-reason').value = '';
+  document.getElementById('health-meds-add-section').style.display = '';
+  document.getElementById('health-meds-list').innerHTML = '';
+
+  ['health-school-no','health-school-yes','health-activity-no','health-activity-yes',
+   'health-rec-sick','health-rec-improving','health-rec-recovered',
+   'health-transition-chip','health-doctor-chip'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('on');
+  });
+  document.getElementById('health-activity-name-wrap').style.display = 'none';
+  document.getElementById('health-activity-name').value = '';
+  document.getElementById('health-doctor-fields').style.display = 'none';
+  document.getElementById('health-doctor-name').value = '';
+  document.getElementById('health-doctor-date').value = '';
+  document.getElementById('health-diagnosis').value = '';
+  document.getElementById('health-notes').value = '';
+  document.getElementById('health-att-list').innerHTML = '';
+}
+
+function toggleHealthKid(kid) {
+  healthKid = (healthKid === kid) ? '' : kid;
+  KIDS.forEach(function (k) {
+    var el = document.getElementById('hkchip-' + k);
+    if (el) el.classList.toggle('on', k === healthKid);
+  });
+}
+
+function toggleHealthSymptom(name) {
+  var idx = healthSymptoms.findIndex(function (s) { return s.name === name; });
+  if (idx > -1) healthSymptoms.splice(idx, 1);
+  else healthSymptoms.push({ name: name, severity: 1 });
+  var id = name.replace(/\s+/g, '-').toLowerCase();
+  var chip = document.getElementById('hsymp-' + id);
+  if (chip) chip.classList.toggle('on', healthSymptoms.some(function (s) { return s.name === name; }));
+  renderSymptomSeverities();
+}
+
+function setSymptomSeverity(name, level) {
+  var s = healthSymptoms.find(function (x) { return x.name === name; });
+  if (s) s.severity = level;
+  renderSymptomSeverities();
+}
+
+function renderSymptomSeverities() {
+  var el = document.getElementById('health-symptom-severities');
+  if (!el) return;
+  if (!healthSymptoms.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">' +
+    healthSymptoms.map(function (s) {
+      return '<div class="symp-sev-row">' +
+        '<span class="symp-name">' + s.name + '</span>' +
+        '<div class="symp-sev-btns">' +
+          [1,2,3].map(function (lv) {
+            return '<button class="symp-sev-btn' + (s.severity === lv ? ' on' : '') + '" onclick="setSymptomSeverity(\'' + s.name + '\', ' + lv + ')">' + SYMPTOM_SEVERITY_LABELS[lv] + '</button>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+}
+
+function setHealthSeverity(n) {
+  healthSeverity = n;
+  [1,2,3,4,5].forEach(function (i) {
+    var btn = document.getElementById('hsevbtn-' + i);
+    if (btn) { btn.className = 'sev-btn'; if (i <= n) btn.classList.add('on-' + n); }
+  });
+  var hints = ['','Mild — minor discomfort','Low concern','Moderate','High concern','Serious — seek care'];
+  var hint = document.getElementById('health-sev-hint');
+  if (hint) hint.textContent = hints[n] || '';
+}
+
+function toggleHealthMedsNone() {
+  healthMedsNone = !healthMedsNone;
+  document.getElementById('health-meds-none-chip').classList.toggle('on', healthMedsNone);
+  document.getElementById('health-meds-none-section').style.display = healthMedsNone ? '' : 'none';
+  document.getElementById('health-meds-add-section').style.display = healthMedsNone ? 'none' : '';
+}
+
+function addHealthMed() {
+  healthMeds.push({ name: '', dose: '', time: '' });
+  renderHealthMeds();
+}
+
+function removeHealthMed(i) {
+  healthMeds.splice(i, 1);
+  renderHealthMeds();
+}
+
+function updateHealthMed(i, field, val) {
+  if (healthMeds[i]) healthMeds[i][field] = val;
+}
+
+function renderHealthMeds() {
+  var el = document.getElementById('health-meds-list');
+  if (!el) return;
+  el.innerHTML = healthMeds.map(function (m, i) {
+    return '<div class="med-row">' +
+      '<input type="text" class="med-name" placeholder="Medication" value="' + (m.name || '') + '" oninput="updateHealthMed(' + i + ',\'name\',this.value)"/>' +
+      '<input type="text" class="med-dose" placeholder="Dose (e.g. 10ml)" value="' + (m.dose || '') + '" oninput="updateHealthMed(' + i + ',\'dose\',this.value)"/>' +
+      '<input type="time" class="med-time" value="' + (m.time || '') + '" oninput="updateHealthMed(' + i + ',\'time\',this.value)"/>' +
+      '<button class="att-rm" onclick="removeHealthMed(' + i + ')">×</button>' +
+    '</div>';
+  }).join('');
+}
+
+function setHealthSchool(val) {
+  healthMissedSchool = val;
+  document.getElementById('health-school-no').classList.toggle('on', !val);
+  document.getElementById('health-school-yes').classList.toggle('on', val);
+}
+
+function setHealthActivity(val) {
+  healthMissedActivity = val;
+  document.getElementById('health-activity-no').classList.toggle('on', !val);
+  document.getElementById('health-activity-yes').classList.toggle('on', val);
+  document.getElementById('health-activity-name-wrap').style.display = val ? '' : 'none';
+}
+
+function setHealthRecovery(stage) {
+  healthRecovery = stage;
+  ['sick','improving','recovered'].forEach(function (s) {
+    var el = document.getElementById('health-rec-' + s);
+    if (el) el.classList.toggle('on', s === stage);
+  });
+}
+
+function setHealthCareProvider(val) {
+  healthCareProvider = val;
+  HEALTH_CARE_PROVIDERS.forEach(function (p) {
+    var el = document.getElementById('hcare-' + p);
+    if (el) el.classList.toggle('on', p === val);
+  });
+}
+
+function toggleHealthTransition() {
+  healthTransition = !healthTransition;
+  document.getElementById('health-transition-chip').classList.toggle('on', healthTransition);
+}
+
+function toggleHealthDoctorVisit() {
+  healthDoctorVisit = !healthDoctorVisit;
+  document.getElementById('health-doctor-chip').classList.toggle('on', healthDoctorVisit);
+  document.getElementById('health-doctor-fields').style.display = healthDoctorVisit ? '' : 'none';
+}
+
+function handleHealthFiles(files) {
+  Array.from(files).forEach(function (f) {
+    healthAtts.push({ file: f, name: f.name, size: (f.size / 1048576).toFixed(1) + ' MB', type: f.type });
+  });
+  renderHealthAtts();
+  document.getElementById('health-files').value = '';
+}
+
+function renderHealthAtts() {
+  document.getElementById('health-att-list').innerHTML = healthAtts.map(function (a, i) {
+    return '<div class="att-item"><span class="att-name">' + a.name + '</span><span class="att-meta">' + a.size + '</span>' +
+      '<button class="att-rm" onclick="rmHealthAtt(' + i + ')">×</button></div>';
+  }).join('');
+}
+
+function rmHealthAtt(i) { healthAtts.splice(i, 1); renderHealthAtts(); }
+
+function clearHealth() {
+  initHealthPage();
+}
+
+async function saveHealth() {
+  if (!healthKid) { showToast('health', 'err', 'Please select which kid this is for.'); return; }
+  var notes = document.getElementById('health-notes').value.trim();
+  if (!healthSymptoms.length && !notes) { showToast('health', 'err', 'Please add at least one symptom or write a note.'); return; }
+
+  var tempVal = document.getElementById('health-temp').value;
+  var entry = {
+    entry_type: 'capture',
+    category: 'health',
+    category_name: 'Health & Medical',
+    entry_date: new Date(document.getElementById('health-date').value || Date.now()).toISOString(),
+    logger: ls('logger') || 'Haley',
+    user_id: currentUser.id,
+    people: [healthKid],
+    kid: healthKid,
+    severity: healthSeverity || null,
+    temperature: tempVal ? parseFloat(tempVal) : null,
+    symptoms: healthSymptoms.slice(),
+    medications: healthMedsNone ? [] : healthMeds.filter(function (m) { return m.name.trim(); }),
+    meds_none: healthMedsNone,
+    meds_none_reason: document.getElementById('health-meds-none-reason').value.trim(),
+    missed_school: healthMissedSchool,
+    missed_activity: healthMissedActivity,
+    missed_activity_name: document.getElementById('health-activity-name').value.trim(),
+    recovery_stage: healthRecovery,
+    transition_flag: healthTransition,
+    care_provider: healthCareProvider,
+    doctor_visit: healthDoctorVisit,
+    doctor_name: document.getElementById('health-doctor-name').value.trim(),
+    doctor_visit_date: document.getElementById('health-doctor-date').value || null,
+    diagnosis: document.getElementById('health-diagnosis').value.trim(),
+    facts: notes,
+    attachments: await uploadAttachments(healthAtts),
+    flagged: false,
+  };
+  await saveToSupabase(entry, 'health');
+}
+
+// ── OUR PARENTING ─────────────────────────────────────────────────────────────
+var opAction = '';
+var opKids = [];
+var opOutcome = '';
+var opNotifyMethod = '';
+var allOpEntries = [];
+
+function initOurParentingPage() {
+  opAction = ''; opKids = []; opOutcome = ''; opNotifyMethod = '';
+  setNow('op-date');
+  loadLogger();
+
+  // Action chips — single select, full-width label style
+  var actionEl = document.getElementById('op-action-chips');
+  if (actionEl) actionEl.innerHTML = OUR_PARENTING_ACTIONS.map(function (a) {
+    return '<div class="kchip op-action-chip" id="opact-' + a.id + '" onclick="selectOpAction(\'' + a.id + '\')">' + a.label + '</div>';
+  }).join('');
+
+  // Kid chips — multi-select + All
+  var kidsEl = document.getElementById('op-kids-row');
+  if (kidsEl) kidsEl.innerHTML = KIDS.concat(['All']).map(function (k) {
+    return '<div class="kchip" id="opkid-' + k + '" onclick="toggleOpKid(\'' + k + '\')">' + k + '</div>';
+  }).join('');
+
+  // Notify method chips — single select
+  var notifyEl = document.getElementById('op-notify-chips');
+  if (notifyEl) notifyEl.innerHTML = OUR_PARENTING_NOTIFY_METHODS.map(function (m) {
+    var id = m.replace(/\s+/g, '-').toLowerCase();
+    return '<div class="kchip" id="opnotify-' + id + '" onclick="selectOpNotify(\'' + m + '\')">' + m + '</div>';
+  }).join('');
+
+  // Outcome chips — single select
+  var outcomeEl = document.getElementById('op-outcome-chips');
+  if (outcomeEl) outcomeEl.innerHTML = OUR_PARENTING_OUTCOMES.map(function (o) {
+    var id = o.replace(/\s+/g,'-').toLowerCase();
+    return '<div class="kchip" id="opout-' + id + '" onclick="selectOpOutcome(\'' + o + '\')">' + o + '</div>';
+  }).join('');
+
+  document.getElementById('op-decline-wrap').style.display = 'none';
+  document.getElementById('op-notify-wrap').style.display = 'none';
+  document.getElementById('op-decline-reason').value = '';
+  document.getElementById('op-notes').value = '';
+}
+
+function selectOpAction(id) {
+  opAction = (opAction === id) ? '' : id;
+  OUR_PARENTING_ACTIONS.forEach(function (a) {
+    var el = document.getElementById('opact-' + a.id);
+    if (el) el.classList.toggle('on', a.id === opAction);
+  });
+  var action = OUR_PARENTING_ACTIONS.find(function (a) { return a.id === opAction; });
+  document.getElementById('op-decline-wrap').style.display = (action && action.decline) ? '' : 'none';
+  document.getElementById('op-notify-wrap').style.display = (action && action.notify) ? '' : 'none';
+  // Clear conditional fields when switching away
+  if (!action || !action.decline) document.getElementById('op-decline-reason').value = '';
+  if (!action || !action.notify) {
+    opNotifyMethod = '';
+    OUR_PARENTING_NOTIFY_METHODS.forEach(function (m) {
+      var el = document.getElementById('opnotify-' + m.replace(/\s+/g,'-').toLowerCase());
+      if (el) el.classList.remove('on');
+    });
+  }
+}
+
+function toggleOpKid(kid) {
+  if (kid === 'All') {
+    opKids = opKids.length === 1 && opKids[0] === 'All' ? [] : ['All'];
+  } else {
+    opKids = opKids.filter(function (k) { return k !== 'All'; });
+    if (opKids.includes(kid)) opKids = opKids.filter(function (k) { return k !== kid; });
+    else opKids.push(kid);
+  }
+  KIDS.concat(['All']).forEach(function (k) {
+    var el = document.getElementById('opkid-' + k);
+    if (el) el.classList.toggle('on', opKids.includes(k));
+  });
+}
+
+function selectOpNotify(method) {
+  opNotifyMethod = (opNotifyMethod === method) ? '' : method;
+  OUR_PARENTING_NOTIFY_METHODS.forEach(function (m) {
+    var el = document.getElementById('opnotify-' + m.replace(/\s+/g,'-').toLowerCase());
+    if (el) el.classList.toggle('on', m === opNotifyMethod);
+  });
+}
+
+function selectOpOutcome(outcome) {
+  opOutcome = (opOutcome === outcome) ? '' : outcome;
+  OUR_PARENTING_OUTCOMES.forEach(function (o) {
+    var el = document.getElementById('opout-' + o.replace(/\s+/g,'-').toLowerCase());
+    if (el) el.classList.toggle('on', o === opOutcome);
+  });
+}
+
+function clearOurParenting() {
+  initOurParentingPage();
+}
+
+async function saveOurParenting() {
+  if (!opAction) { showToast('op', 'err', 'Please select an action type.'); return; }
+  if (!opKids.length) { showToast('op', 'err', 'Please select which child(ren) this involves.'); return; }
+  var notes = document.getElementById('op-notes').value.trim();
+  if (!notes) { showToast('op', 'err', 'Please add notes describing what was done.'); return; }
+
+  var action = OUR_PARENTING_ACTIONS.find(function (a) { return a.id === opAction; });
+  if (action && action.decline) {
+    var reason = document.getElementById('op-decline-reason').value.trim();
+    if (!reason) { showToast('op', 'err', 'Please enter the reason for declining.'); return; }
+  }
+  if (action && action.notify) {
+    if (!opNotifyMethod) { showToast('op', 'err', 'Please select the method of notification.'); return; }
+  }
+
+  var entry = {
+    entry_date: new Date(document.getElementById('op-date').value || Date.now()).toISOString(),
+    logger: ls('logger') || 'Haley',
+    user_id: currentUser.id,
+    action_type: opAction,
+    kids: opKids.slice(),
+    notes: notes,
+    outcome: opOutcome || null,
+    decline_reason: (action && action.decline) ? document.getElementById('op-decline-reason').value.trim() : null,
+    notify_method: (action && action.notify) ? opNotifyMethod : null,
+  };
+
+  var { data, error } = await sb.from('our_parenting').insert(entry).select();
+  if (error) { showToast('op', 'err', 'Save failed: ' + error.message); return; }
+  allOpEntries.unshift(Array.isArray(data) ? data[0] : data);
+  showToast('op', 'ok', 'Saved.');
+  clearOurParenting();
+}
+
+// ── OUR PARENTING LOG VIEW ─────────────────────────────────────────────────────
+async function loadOpEntries() {
+  var { data, error } = await sb.from('our_parenting').select('*').order('entry_date', { ascending: false }).limit(500);
+  if (!error && data) allOpEntries = data;
+}
+
+function initOpLog() {
+  // Populate action filter dropdown
+  var sel = document.getElementById('opl-filter-action');
+  if (sel && sel.options.length === 1) {
+    OUR_PARENTING_ACTIONS.forEach(function (a) {
+      var opt = document.createElement('option');
+      opt.value = a.id; opt.textContent = a.label;
+      sel.appendChild(opt);
+    });
+  }
+  loadOpEntries().then(renderOpLog);
+}
+
+function applyOpFilter() { renderOpLog(); }
+
+function clearOpFilter() {
+  document.getElementById('opl-filter-action').value = '';
+  document.getElementById('opl-filter-kid').value = '';
+  document.getElementById('opl-filter-from').value = '';
+  document.getElementById('opl-filter-to').value = '';
+  renderOpLog();
+}
+
+function renderOpLog() {
+  var actionFilter = document.getElementById('opl-filter-action').value;
+  var kidFilter = document.getElementById('opl-filter-kid').value;
+  var fromFilter = document.getElementById('opl-filter-from').value;
+  var toFilter = document.getElementById('opl-filter-to').value;
+
+  var filtered = allOpEntries.filter(function (e) {
+    if (actionFilter && e.action_type !== actionFilter) return false;
+    if (kidFilter && !(e.kids || []).includes(kidFilter)) return false;
+    if (fromFilter && e.entry_date < new Date(fromFilter).toISOString()) return false;
+    if (toFilter && e.entry_date > new Date(toFilter + 'T23:59:59').toISOString()) return false;
+    return true;
+  });
+
+  var countEl = document.getElementById('op-log-count');
+  if (countEl) countEl.textContent = filtered.length + ' entr' + (filtered.length === 1 ? 'y' : 'ies');
+
+  var listEl = document.getElementById('op-log-list');
+  if (!listEl) return;
+  if (!filtered.length) { listEl.innerHTML = '<div class="empty">No entries match the selected filters.</div>'; return; }
+  listEl.innerHTML = filtered.map(renderOpCard).join('');
+}
+
+function renderOpCard(e) {
+  var d = new Date(e.entry_date || e.created_at);
+  var ds = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) +
+    ' · ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  var action = OUR_PARENTING_ACTIONS.find(function (a) { return a.id === e.action_type; });
+  var actionLabel = action ? action.label : e.action_type;
+  var kids = (e.kids || []).join(', ');
+
+  return '<div class="ecard op-card">' +
+    '<div class="ehdr">' +
+      '<div class="badges">' +
+        '<span class="bdg ' + (e.logger === 'Dave' ? 'b-d' : 'b-h') + '">' + e.logger + '</span>' +
+        '<span class="bdg b-op-action">' + actionLabel + '</span>' +
+        (kids ? '<span class="bdg b-kid">' + kids + '</span>' : '') +
+        (e.outcome ? '<span class="bdg b-op-outcome">' + e.outcome + '</span>' : '') +
+      '</div>' +
+      '<span class="edate">' + ds + '</span>' +
+    '</div>' +
+    (e.notes ? '<div class="facts-block"><div class="facts-label">Notes</div><div class="facts-text">' + e.notes + '</div></div>' : '') +
+    (e.decline_reason ? '<div class="assessment-block"><div class="assessment-label">Reason for declining</div><div class="facts-text">' + e.decline_reason + '</div></div>' : '') +
+    (e.notify_method ? '<div style="font-size:12px;color:var(--text3);margin-top:7px;">Notified via: ' + e.notify_method + '</div>' : '') +
+    '</div>';
+}
+
 // ── DAILY REFLECTION ──────────────────────────────────────────────────────────
 function initFlow() {
   flowStep = 0; flowKidsHome = true; flowMaryContact = false;
@@ -1022,6 +1494,7 @@ function renderEntryCard(e) {
   });
   var catClass = e.category || 'kids';
   var catBadgeClass = 'b-' + catClass;
+  if (catClass === 'health') catBadgeClass = 'b-health';
 
   var body = '';
   if (e.entry_type === 'reflection') {
@@ -1049,9 +1522,27 @@ function renderEntryCard(e) {
         (e.mary_feelings && e.mary_feelings.length ? ' · ' + e.mary_feelings.join(', ') : ''));
     }
     body = parts.join('<br>');
+  } else if (e.category === 'health') {
+    var hparts = [];
+    if (e.recovery_stage) {
+      var stageEmoji = { sick: '🤒', improving: '😐', recovered: '😊' };
+      hparts.push((stageEmoji[e.recovery_stage] || '') + ' ' + e.recovery_stage.charAt(0).toUpperCase() + e.recovery_stage.slice(1));
+    }
+    if (e.temperature) hparts.push('Temp: ' + e.temperature + '°F');
+    if (e.symptoms && e.symptoms.length) {
+      hparts.push('Symptoms: ' + e.symptoms.map(function (s) { return s.name + (s.severity > 1 ? ' (' + (SYMPTOM_SEVERITY_LABELS[s.severity] || '') + ')' : ''); }).join(', '));
+    }
+    if (e.missed_school) hparts.push('Missed school');
+    if (e.missed_activity) hparts.push('Missed: ' + (e.missed_activity_name || 'activity'));
+    if (e.meds_none) hparts.push('No meds given' + (e.meds_none_reason ? ' — ' + e.meds_none_reason : ''));
+    else if (e.medications && e.medications.length) hparts.push('Meds: ' + e.medications.map(function (m) { return m.name + (m.dose ? ' ' + m.dose : ''); }).join(', '));
+    if (e.doctor_visit) hparts.push('Doctor visit' + (e.doctor_name ? ': ' + e.doctor_name : '') + (e.diagnosis ? ' — ' + e.diagnosis : ''));
+    body = hparts.join('<br>');
   } else {
     body = '';
   }
+
+  var transitionBadge = (e.transition_flag ? '<span class="bdg b-transition">⚡ transition</span>' : '');
 
   return '<div class="ecard ' + catClass + '">' +
     '<div class="ehdr">' +
@@ -1062,6 +1553,7 @@ function renderEntryCard(e) {
         (people ? '<span class="bdg b-kid">' + people + '</span>' : '') +
         (e.location ? '<span class="bdg b-loc">' + e.location + '</span>' : '') +
         (e.info_source ? '<span class="bdg b-source">' + e.info_source + '</span>' : '') +
+        transitionBadge +
       '</div>' +
       '<span class="edate">' + ds + '</span>' +
     '</div>' +
@@ -1084,6 +1576,7 @@ function renderTrends() {
   // By category
   var catCounts = {};
   ENTRY_CATEGORIES.forEach(function (c) { catCounts[c.name] = 0; });
+  catCounts['Health & Medical'] = 0;
   captures.forEach(function (e) { if (catCounts[e.category_name] !== undefined) catCounts[e.category_name]++; });
   var maxCat = Math.max.apply(null, Object.values(catCounts)) || 1;
 
@@ -1214,6 +1707,28 @@ function genExport() {
           out += '\n';
           if (e.mary_notes) out += 'Notes: ' + e.mary_notes + '\n';
         }
+      } else if (e.category === 'health') {
+        if (e.kid) out += 'Kid: ' + e.kid + '\n';
+        if (e.recovery_stage) out += 'Recovery stage: ' + e.recovery_stage + '\n';
+        if (e.temperature) out += 'Temperature: ' + e.temperature + '°F\n';
+        if (e.symptoms && e.symptoms.length) {
+          out += 'Symptoms: ' + e.symptoms.map(function (s) { return s.name + (s.severity > 1 ? ' (' + SYMPTOM_SEVERITY_LABELS[s.severity] + ')' : ''); }).join(', ') + '\n';
+        }
+        if (e.meds_none) out += 'Medications: None given' + (e.meds_none_reason ? ' — ' + e.meds_none_reason : '') + '\n';
+        else if (e.medications && e.medications.length) out += 'Medications: ' + e.medications.map(function (m) { return m.name + (m.dose ? ' ' + m.dose : '') + (m.time ? ' at ' + m.time : ''); }).join('; ') + '\n';
+        if (e.missed_school) out += 'Missed school: Yes\n';
+        if (e.missed_activity) out += 'Missed activity: ' + (e.missed_activity_name || 'Yes') + '\n';
+        if (e.care_provider) out += 'Care provided by: ' + e.care_provider + '\n';
+        if (e.transition_flag) out += 'TRANSITION FLAG: Started or worsened within 24 hrs of custody exchange\n';
+        if (e.doctor_visit) {
+          out += 'Doctor visit: Yes';
+          if (e.doctor_name) out += ' — ' + e.doctor_name;
+          if (e.doctor_visit_date) out += ' on ' + e.doctor_visit_date;
+          out += '\n';
+          if (e.diagnosis) out += 'Diagnosis: ' + e.diagnosis + '\n';
+        }
+        if (e.facts) out += 'Notes: ' + e.facts + '\n';
+        if (e.attachments && e.attachments.length) out += 'Attachments: ' + e.attachments.map(function (a) { return a.name; }).join(', ') + '\n';
       } else {
         if (e.facts) out += 'FACTS: ' + e.facts + '\n';
         if (e.assessment) out += 'ASSESSMENT: ' + e.assessment + '\n';

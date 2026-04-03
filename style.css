@@ -271,6 +271,27 @@ a.atag:hover{text-decoration:underline;}
 .export-card p{font-size:13px;color:var(--text2);margin-bottom:.9rem;line-height:1.6;}
 .exp-ta{font-family:'Jost',monospace;font-size:12px;line-height:1.7;min-height:360px;margin-top:11px;background:var(--surface2);border-color:var(--border);width:100%;}
 
+/* OUR PARENTING */
+.ecard.op-card{border-left:3px solid var(--sage);}
+.b-op-action{background:var(--sage-l);color:var(--sage);font-weight:500;}
+.b-op-outcome{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.op-action-chip{width:100%;text-align:left;border-radius:9px;white-space:normal;height:auto;line-height:1.4;padding:8px 14px;}
+
+/* HEALTH & MEDICAL */
+.ecard.health{border-left:3px solid var(--blue);}
+.b-health{background:var(--blue-l);color:var(--blue);}
+.b-transition{background:#fff3cd;color:#7a5800;border:1px solid #e0c860;font-size:10px;}
+.symp-sev-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.symp-name{font-size:13px;color:var(--text2);min-width:100px;}
+.symp-sev-btns{display:flex;gap:5px;}
+.symp-sev-btn{padding:4px 11px;border-radius:100px;border:1px solid var(--border);font-size:12px;cursor:pointer;color:var(--text2);background:var(--surface);font-family:'Jost',sans-serif;transition:all .12s;}
+.symp-sev-btn:hover{border-color:var(--border2);}
+.symp-sev-btn.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+.med-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;}
+.med-name{flex:2;min-width:120px;}
+.med-dose{flex:1;min-width:80px;}
+.med-time{width:100px;}
+
 @media(max-width:640px){
   .shell{grid-template-columns:1fr;}.sidebar{display:none;}
   .main{padding:1rem;}.stats-row{grid-template-columns:1fr 1fr;}

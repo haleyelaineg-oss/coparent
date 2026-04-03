@@ -138,3 +138,33 @@ var KIDS = ['Landon', 'Luke', 'Leo'];
 
 // ── MARY KIDS TREATMENT OPTIONS ───────────────────────────────────────────────
 var MARY_TREATMENT = ['Warm', 'Neutral', 'Dismissive', 'Cold', 'Not present'];
+
+// ── HEALTH & MEDICAL ──────────────────────────────────────────────────────────
+var HEALTH_SYMPTOMS = [
+  'Fever', 'Cough', 'Runny nose', 'Sore throat', 'Headache',
+  'Stomach ache', 'Vomiting', 'Diarrhea', 'Fatigue', 'Rash',
+  'Earache', 'Congestion', 'Other'
+];
+var HEALTH_CARE_PROVIDERS = ['Haley', 'Dave', 'Both'];
+var SYMPTOM_SEVERITY_LABELS = ['', 'Mild', 'Moderate', 'Severe'];
+
+// ── OUR PARENTING LOG ─────────────────────────────────────────────────────────
+var OUR_PARENTING_ACTIONS = [
+  { id: 'scheduled-after-3pm',    label: 'Scheduled appointment after 3pm',         notify: false, decline: false },
+  { id: 'notified-illness',       label: 'Notified Mary promptly of illness/injury', notify: true,  decline: false },
+  { id: 'consulted-mary',         label: 'Consulted Mary on major health or education decision', notify: false, decline: false },
+  { id: 'encouraged-contact',     label: 'Encouraged child contact with Mary',       notify: false, decline: false },
+  { id: 'positive-transition',    label: 'Supported positive transition/goodbye',    notify: false, decline: false },
+  { id: 'accommodated-request',   label: "Accommodated Mary's request",              notify: false, decline: false },
+  { id: 'declined-request',       label: "Declined Mary's request",                  notify: false, decline: true  },
+  { id: 'followed-jod',           label: 'Followed JOD parenting schedule',          notify: false, decline: false },
+  { id: 'modeled-coparenting',    label: 'Modeled positive co-parenting',            notify: false, decline: false },
+  { id: 'other-intentional',      label: 'Other intentional parenting action',       notify: false, decline: false },
+];
+var OUR_PARENTING_OUTCOMES = [
+  'Acknowledged by Mary',
+  'Ignored by Mary',
+  'Declined by Mary',
+  'N/A',
+];
+var OUR_PARENTING_NOTIFY_METHODS = ['CoParent app', 'Text', 'Email', 'Phone call'];
