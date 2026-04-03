@@ -463,7 +463,7 @@ function setSeverity(n) {
 
 function handleFiles(files) {
   Array.from(files).forEach(function (f) {
-    capAtts.push({ name: f.name, size: (f.size / 1048576).toFixed(1) + ' MB', type: f.type });
+    capAtts.push({ file: f, name: f.name, size: (f.size / 1048576).toFixed(1) + ' MB', type: f.type });
   });
   renderAtts();
   document.getElementById('cap-files').value = '';
@@ -532,7 +532,7 @@ async function saveEntry() {
     quote: document.getElementById('cap-quote').value.trim(),
     severity: category === 'memories' ? null : (capSeverity || null),
     witnesses: document.getElementById('cap-witnesses').value.trim(),
-    attachments: capAtts.map(function (a) { return { name: a.name, size: a.size, type: a.type }; }),
+    attachments: await uploadAttachments(capAtts),
     flagged: false,
   };
 
@@ -568,7 +568,7 @@ function toggleMemPerson(name) {
 
 function handleMemFiles(files) {
   Array.from(files).forEach(function (f) {
-    memAtts.push({ name: f.name, size: (f.size / 1048576).toFixed(1) + ' MB', type: f.type });
+    memAtts.push({ file: f, name: f.name, size: (f.size / 1048576).toFixed(1) + ' MB', type: f.type });
   });
   renderMemAtts();
   document.getElementById('mem-files').value = '';
@@ -619,7 +619,7 @@ async function saveMemory() {
     quote: document.getElementById('mem-quote').value.trim(),
     severity: null,
     flagged: false,
-    attachments: memAtts.map(function (a) { return { name: a.name, size: a.size, type: a.type }; }),
+    attachments: await uploadAttachments(memAtts),
   };
   await saveToSupabase(entry, 'mem');
 }
@@ -841,6 +841,20 @@ async function saveReflection() {
 }
 
 // ── SUPABASE SAVE ─────────────────────────────────────────────────────────────
+async function uploadAttachments(atts) {
+  var results = [];
+  for (var i = 0; i < atts.length; i++) {
+    var a = atts[i];
+    if (!a.file) { results.push({ name: a.name, size: a.size, type: a.type, url: a.url }); continue; }
+    var path = currentUser.id + '/' + Date.now() + '_' + a.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    var { error } = await sb.storage.from('attachments').upload(path, a.file);
+    if (error) { showToast('att', 'err', 'Upload failed: ' + a.name + ' — ' + error.message); results.push({ name: a.name, size: a.size, type: a.type }); continue; }
+    var { data } = sb.storage.from('attachments').getPublicUrl(path);
+    results.push({ name: a.name, size: a.size, type: a.type, url: data.publicUrl, path: path });
+  }
+  return results;
+}
+
 async function saveToSupabase(entry, prefix) {
   var { data, error } = await sb.from('entries').insert(entry).select();
   if (error) { showToast(prefix, 'err', 'Save failed: ' + error.message); return; }
@@ -967,7 +981,7 @@ function renderEntryCard(e) {
     (e.quote ? '<div class="equote">"' + e.quote + '"</div>' : '') +
     (e.severity ? '<div class="escale"><span class="stag">Severity ' + e.severity + '/5</span></div>' : '') +
     (e.witnesses ? '<div class="ewit">Witnesses: ' + e.witnesses + '</div>' : '') +
-    (atts.length ? '<div class="eatts">' + atts.map(function (a) { return '<span class="atag">' + a.name + '</span>'; }).join('') + '</div>' : '') +
+    (atts.length ? '<div class="eatts">' + atts.map(function (a) { return a.url ? '<a class="atag" href="' + a.url + '" target="_blank" rel="noopener">' + a.name + '</a>' : '<span class="atag">' + a.name + '</span>'; }).join('') + '</div>' : '') +
     '</div>';
 }
 
