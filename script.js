@@ -14,6 +14,7 @@ var passwordMode = false;
 
 // ── APP STATE ─────────────────────────────────────────────────────────────────
 var allEntries = [];
+var allPatterns = [];
 var currentFilter = 'all';
 var currentPersonFilter = null;
 var expCats = ['kids', 'parenting', 'coparenting', 'reflection'];
@@ -23,6 +24,7 @@ var capPeople = [];
 var capSource = '';
 var capCategory = '';
 var capSeverity = 0;
+var capPatterns = [];
 var capAtts = [];
 
 // Daily reflection state
@@ -170,6 +172,7 @@ function onAuthenticated() {
   initCapturePage();
   loadHabits().then(renderDashboard);
   loadEntries().then(updateCount);
+  loadPatterns();
 }
 
 // ── LOGGER ────────────────────────────────────────────────────────────────────
@@ -202,6 +205,7 @@ function nav(page, btn) {
   if (page === 'capture') { setNow('cap-date'); loadLogger(); }
   if (page === 'memories') initMemoriesPage();
   if (page === 'manage-habits') initManageHabits();
+  if (page === 'manage-patterns') initManagePatterns();
   if (page === 'settings') renderThemePicker();
 }
 
@@ -364,6 +368,86 @@ function renderHabitsList() {
   }).join('');
 }
 
+// ── PATTERNS ──────────────────────────────────────────────────────────────────
+async function loadPatterns() {
+  var { data, error } = await sb.from('patterns').select('*').order('category').order('sort_order');
+  if (!error && data) { allPatterns = data; renderPatternChips(); }
+}
+
+function renderPatternChips() {
+  var maryEl = document.getElementById('cap-patterns-mary');
+  var boysEl = document.getElementById('cap-patterns-boys');
+  if (!maryEl || !boysEl) return;
+  var mary = allPatterns.filter(function (p) { return p.category === 'mary'; });
+  var boys = allPatterns.filter(function (p) { return p.category === 'boys'; });
+  maryEl.innerHTML = mary.map(function (p) {
+    return '<div class="kchip pchip pchip-mary" id="pchip-' + p.slug + '" title="' + p.description + '" onclick="toggleCapPattern(\'' + p.slug + '\')">' + p.label + '</div>';
+  }).join('');
+  boysEl.innerHTML = boys.map(function (p) {
+    return '<div class="kchip pchip pchip-boys" id="pchip-' + p.slug + '" title="' + p.description + '" onclick="toggleCapPattern(\'' + p.slug + '\')">' + p.label + '</div>';
+  }).join('');
+}
+
+function toggleCapPattern(slug) {
+  if (capPatterns.includes(slug)) capPatterns = capPatterns.filter(function (s) { return s !== slug; });
+  else capPatterns.push(slug);
+  var el = document.getElementById('pchip-' + slug);
+  if (el) el.classList.toggle('on', capPatterns.includes(slug));
+}
+
+function initManagePatterns() {
+  document.getElementById('new-pattern-label').value = '';
+  document.getElementById('new-pattern-desc').value = '';
+  document.getElementById('new-pattern-category').value = 'mary';
+  renderPatternsList();
+}
+
+async function addPattern() {
+  var label = document.getElementById('new-pattern-label').value.trim();
+  var desc = document.getElementById('new-pattern-desc').value.trim();
+  var category = document.getElementById('new-pattern-category').value;
+  if (!label) { showToast('mp', 'err', 'Please enter a pattern label.'); return; }
+  var slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  var maxOrder = allPatterns.filter(function (p) { return p.category === category; }).reduce(function (m, p) { return Math.max(m, p.sort_order); }, 0);
+  var { data, error } = await sb.from('patterns').insert({ slug: slug, label: label, description: desc, category: category, sort_order: maxOrder + 1 }).select();
+  if (error) { showToast('mp', 'err', 'Save failed: ' + error.message); return; }
+  allPatterns.push(data[0]);
+  showToast('mp', 'ok', 'Pattern added.');
+  document.getElementById('new-pattern-label').value = '';
+  document.getElementById('new-pattern-desc').value = '';
+  renderPatternChips();
+  renderPatternsList();
+}
+
+async function deletePattern(id) {
+  var { error } = await sb.from('patterns').delete().eq('id', id);
+  if (error) { showToast('mp', 'err', 'Delete failed: ' + error.message); return; }
+  allPatterns = allPatterns.filter(function (p) { return p.id !== id; });
+  renderPatternChips();
+  renderPatternsList();
+}
+
+function renderPatternsList() {
+  var el = document.getElementById('patterns-manage-list');
+  if (!allPatterns.length) { el.innerHTML = '<div class="empty">No patterns yet.</div>'; return; }
+  var mary = allPatterns.filter(function (p) { return p.category === 'mary'; });
+  var boys = allPatterns.filter(function (p) { return p.category === 'boys'; });
+  function renderGroup(title, list) {
+    if (!list.length) return '';
+    return '<div class="pt-group-lbl">' + title + '</div>' +
+      list.map(function (p) {
+        return '<div class="mh-item">' +
+          '<div class="mh-body">' +
+          '<div class="mh-name">' + p.label + '</div>' +
+          (p.description ? '<div class="mh-kids">' + p.description + '</div>' : '') +
+          '</div>' +
+          '<button class="btn" onclick="deletePattern(\'' + p.id + '\')" style="flex-shrink:0;font-size:12px;padding:4px 10px;">Remove</button>' +
+          '</div>';
+      }).join('');
+  }
+  el.innerHTML = renderGroup("Mary's Behavior", mary) + renderGroup("Boys' Patterns", boys);
+}
+
 // ── CAPTURE PAGE INIT ─────────────────────────────────────────────────────────
 function initCapturePage() {
   // Build location dropdown
@@ -479,7 +563,8 @@ function renderAtts() {
 function rmAtt(i) { capAtts.splice(i, 1); renderAtts(); }
 
 function clearCapture() {
-  capPeople = []; capSource = ''; capCategory = ''; capSeverity = 0; capAtts = [];
+  capPeople = []; capSource = ''; capCategory = ''; capSeverity = 0; capAtts = []; capPatterns = [];
+  allPatterns.forEach(function (p) { var el = document.getElementById('pchip-' + p.slug); if (el) el.classList.remove('on'); });
   document.getElementById('cap-facts').value = '';
   document.getElementById('cap-assessment').value = '';
   document.getElementById('cap-quote').value = '';
@@ -533,6 +618,7 @@ async function saveEntry() {
     severity: category === 'memories' ? null : (capSeverity || null),
     witnesses: document.getElementById('cap-witnesses').value.trim(),
     attachments: await uploadAttachments(capAtts),
+    pattern_tags: capPatterns.slice(),
     flagged: false,
   };
 
@@ -930,6 +1016,10 @@ function renderEntryCard(e) {
     ' · ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   var people = (e.people || []).join(', ');
   var atts = e.attachments || [];
+  var pats = (e.pattern_tags || []).map(function (slug) {
+    var p = allPatterns.find(function (x) { return x.slug === slug; });
+    return p ? { label: p.label, cat: p.category } : { label: slug, cat: 'mary' };
+  });
   var catClass = e.category || 'kids';
   var catBadgeClass = 'b-' + catClass;
 
@@ -982,6 +1072,7 @@ function renderEntryCard(e) {
     (e.severity ? '<div class="escale"><span class="stag">Severity ' + e.severity + '/5</span></div>' : '') +
     (e.witnesses ? '<div class="ewit">Witnesses: ' + e.witnesses + '</div>' : '') +
     (atts.length ? '<div class="eatts">' + atts.map(function (a) { return a.url ? '<a class="atag" href="' + a.url + '" target="_blank" rel="noopener">' + a.name + '</a>' : '<span class="atag">' + a.name + '</span>'; }).join('') + '</div>' : '') +
+    (pats.length ? '<div class="epats">' + pats.map(function (p) { return '<span class="ptag ptag-' + p.cat + '">' + p.label + '</span>'; }).join('') + '</div>' : '') +
     '</div>';
 }
 
@@ -1037,7 +1128,27 @@ function renderTrends() {
       var avg = arr.length ? (arr.reduce(function (a, b) { return a + b; }, 0) / arr.length).toFixed(1) : '—';
       return '<div class="bar-row"><div class="bar-label">' + c.name + '</div>' +
         '<div style="font-size:13px;font-weight:500;color:var(--text2);">' + avg + '</div></div>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' +
+
+    (function () {
+      var patCounts = {};
+      allEntries.forEach(function (e) {
+        (e.pattern_tags || []).forEach(function (slug) { patCounts[slug] = (patCounts[slug] || 0) + 1; });
+      });
+      var sorted = Object.entries(patCounts).sort(function (a, b) { return b[1] - a[1]; });
+      if (!sorted.length) return '<div class="trend-box"><div class="trend-title">Pattern Frequency</div><div class="empty" style="font-size:13px;">No patterns tagged yet.</div></div>';
+      var maxPat = sorted[0][1] || 1;
+      return '<div class="trend-box trend-box-wide"><div class="trend-title">Pattern Frequency</div>' +
+        sorted.map(function (kv) {
+          var p = allPatterns.find(function (x) { return x.slug === kv[0]; });
+          var label = p ? p.label : kv[0];
+          var cat = p ? p.category : 'mary';
+          return '<div class="bar-row"><div class="bar-label">' +
+            '<span class="ptag ptag-' + cat + '" style="font-size:10px;padding:1px 6px;">' + label + '</span></div>' +
+            '<div class="bar-track"><div class="bar-fill" style="width:' + Math.round(kv[1] / maxPat * 100) + '%"></div></div>' +
+            '<div class="bar-count">' + kv[1] + '</div></div>';
+        }).join('') + '</div>';
+    })();
 }
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────

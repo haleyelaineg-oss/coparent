@@ -39,12 +39,22 @@
 /* trends */
 .trend-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem;}
 .trend-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem;box-shadow:var(--shadow);}
+.trend-box-wide{grid-column:1/-1;}
 .trend-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:.75rem;}
 .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
 .bar-label{font-size:12px;color:var(--text2);min-width:120px;}
 .bar-track{flex:1;height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;}
 .bar-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .4s;}
 .bar-count{font-size:11px;color:var(--text3);min-width:24px;text-align:right;}
+/* pattern tags */
+.epats{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;}
+.ptag{font-size:11px;padding:3px 8px;border-radius:6px;font-weight:500;}
+.ptag-mary{background:var(--mauve-l);color:var(--mauve);}
+.ptag-boys{background:var(--sage-l);color:var(--sage);}
+.pchip{font-size:12px;}
+.pchip-mary.on{background:var(--mauve) !important;color:#fff !important;border-color:var(--mauve) !important;}
+.pchip-boys.on{background:var(--sage) !important;color:#fff !important;border-color:var(--sage) !important;}
+.pt-group-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:6px;}
 /* daily reflection */
 .ref-session{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:10px;}
 .ref-session-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
@@ -150,6 +160,7 @@
   <div class="nav-sec">
     <div class="nav-lbl">Settings</div>
     <button class="nb" onclick="nav('manage-habits',this)"><span class="ni">✎</span> Manage Habits</button>
+    <button class="nb" onclick="nav('manage-patterns',this)"><span class="ni">◈</span> Manage Patterns</button>
     <button class="nb" onclick="nav('settings',this)"><span class="ni">⚙</span> Settings</button>
   </div>
 </nav>
@@ -422,6 +433,14 @@
     </div>
   </div>
 
+  <div class="card" id="patterns-card">
+    <div class="ct">Pattern Tags <span style="font-size:11px;color:var(--text3);font-weight:400;">— optional, tag recurring patterns</span></div>
+    <div class="pt-group-lbl">Mary's Behavior</div>
+    <div class="kids-row" id="cap-patterns-mary"></div>
+    <div class="pt-group-lbl" style="margin-top:10px;">Boys' Patterns</div>
+    <div class="kids-row" id="cap-patterns-boys"></div>
+  </div>
+
   <div class="btn-row">
     <button class="btn" onclick="clearCapture()">Clear</button>
     <button class="btn btn-p" onclick="saveEntry()">Save Entry</button>
@@ -557,6 +576,41 @@
   <div class="card">
     <div class="ct">Current Habits</div>
     <div id="habits-manage-list"><div class="empty">Loading...</div></div>
+  </div>
+</div>
+
+<!-- MANAGE PATTERNS -->
+<div class="pg" id="pg-manage-patterns">
+  <h1 class="pg-title">Manage Patterns</h1>
+  <p class="pg-sub">Add or remove behavior patterns. These appear as tags in the New Entry form.</p>
+
+  <div class="card">
+    <div class="ct">Add a Pattern</div>
+    <div class="fg1" style="margin-bottom:12px;">
+      <label class="fgl">Label</label>
+      <input type="text" id="new-pattern-label" placeholder="e.g. Guilt Trip"/>
+    </div>
+    <div class="fg1" style="margin-bottom:12px;">
+      <label class="fgl">Description <span style="font-size:11px;color:var(--text3);font-weight:400;">— optional, shows on hover</span></label>
+      <input type="text" id="new-pattern-desc" placeholder="Brief description of what this pattern looks like"/>
+    </div>
+    <div class="fg1" style="margin-bottom:12px;">
+      <label class="fgl">Category</label>
+      <select id="new-pattern-category">
+        <option value="mary">Mary's Behavior</option>
+        <option value="boys">Boys' Patterns</option>
+      </select>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-p" onclick="addPattern()">Add Pattern</button>
+    </div>
+    <div class="toast t-ok" id="mp-ok"></div>
+    <div class="toast t-err" id="mp-err"></div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Current Patterns</div>
+    <div id="patterns-manage-list"><div class="empty">Loading...</div></div>
   </div>
 </div>
 
