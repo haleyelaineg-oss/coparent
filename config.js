@@ -62,14 +62,14 @@ var ENTRY_CATEGORIES = [
     id: 'parenting',
     name: 'Parenting',
     icon: '♡',
-    description: 'How Mary treats the kids — witnessed or reported',
+    description: 'Parenting moments, interactions, observations, concerns',
     color: 'var(--mauve)',
     colorL: 'var(--mauve-l)',
     types: [
       { id: 'positive-parenting', name: 'Positive parenting moment', defaultSeverity: 5 },
       { id: 'dismissive', name: 'Dismissive / invalidating', defaultSeverity: 2 },
       { id: 'denying-choice', name: 'Denying choice or autonomy', defaultSeverity: 2 },
-      { id: 'emotional-response', name: 'Emotional response to kids', defaultSeverity: 2 },
+      { id: 'emotional-response', name: 'Emotional response/parentification', defaultSeverity: 2 },
       { id: 'physical-care', name: 'Physical care concern', defaultSeverity: 1 },
       { id: 'kids-reported', name: 'Kids reported something', defaultSeverity: 2 },
       { id: 'witnessed-behavior', name: 'Witnessed behavior', defaultSeverity: 2 },
@@ -77,20 +77,31 @@ var ENTRY_CATEGORIES = [
   },
   {
     id: 'coparenting',
-    name: 'Co-Parenting',
+    name: 'Co-Parenting (Concerning)',
     icon: '⇄',
-    description: 'Communication, schedule, flexibility, boundaries',
+    description: 'Communication breakdowns, JOD violations, boundary violations',
     color: 'var(--amber)',
     colorL: 'var(--amber-l)',
     types: [
-      { id: 'communication', name: 'Communication', defaultSeverity: 3 },
-      { id: 'schedule-violation', name: 'Schedule violation', defaultSeverity: 1 },
+      { id: 'communication', name: 'Problematic communication', defaultSeverity: 2 },
+      { id: 'miscommunication', name: 'Miscommunication', defaultSeverity: 2 },
+      { id: 'jod-violation', name: 'JOD violation', defaultSeverity: 1 },
       { id: 'flexibility-request', name: 'Parenting time flexibility request', defaultSeverity: 3 },
       { id: 'boundary-violation', name: 'Boundary violation', defaultSeverity: 1 },
-      { id: 'cooperation', name: 'Cooperation / good faith moment', defaultSeverity: 5 },
       { id: 'kid-request-home', name: 'Kid requested to come home', defaultSeverity: 3 },
-      { id: 'us-flexibility', name: 'We extended flexibility', defaultSeverity: 5 },
-      { id: 'us-communication', name: 'We initiated communication', defaultSeverity: 4 },
+    ]
+  },
+  {
+    id: 'coparenting-positive',
+    name: 'Co-Parenting (Positive)',
+    icon: '⇄',
+    description: 'Cooperation, good faith, flexibility extended',
+    color: 'var(--sage)',
+    colorL: 'var(--sage-l)',
+    types: [
+      { id: 'cooperation', name: 'Cooperation / good faith moment', defaultSeverity: 5 },
+      { id: 'flexibility', name: 'Extended flexibility', defaultSeverity: 5 },
+      { id: 'positive-communication', name: 'Positive communication', defaultSeverity: 4 },
     ]
   },
   {
@@ -116,7 +127,7 @@ var ENTRY_CATEGORIES = [
 var FEELINGS = [
   'Frustrated', 'Anxious', 'Dismissed', 'Disrespected', 'Hopeful',
   'Relieved', 'Angry', 'Sad', 'Confused', 'Calm', 'Exhausted',
-  'Overwhelmed', 'Invalidated', 'Drained',
+  'Overwhelmed', 'Invalidated', 'Drained', 'Furious', 'Resentful', 'Appreciative', 'Supported', 'Other'
 ];
 
 // ── MOODS (for Daily Reflection — kids) ──────────────────────────────────────
@@ -127,9 +138,12 @@ var MOODS = [
   { emoji: '😭', label: 'Distraught' },
   { emoji: '😴', label: 'Tired' },
   { emoji: '🤒', label: 'Sick' },
-  { emoji: '😤', label: 'Angry' },
-  { emoji: '😰', label: 'Anxious' },
+  { emoji: '😡', label: 'Angry' },
+  { emoji: '😓', label: 'Anxious' },
   { emoji: '😐', label: 'Okay' },
+  { emoji: '😖', label: 'Frustrated' },
+  { emoji: '🙄', label: 'Annoyed' },
+  { emoji: '😠', label: 'Grumpy' },
 ];
 
 // ── KIDS ──────────────────────────────────────────────────────────────────────
@@ -142,11 +156,11 @@ var MARY_TREATMENT = ['Warm', 'Neutral', 'Dismissive', 'Cold', 'Not present'];
 // ── HEALTH & MEDICAL ──────────────────────────────────────────────────────────
 var HEALTH_SYMPTOMS = [
   'Fever', 'Cough', 'Runny nose', 'Sore throat', 'Headache',
-  'Stomach ache', 'Vomiting', 'Diarrhea', 'Fatigue', 'Rash',
+  'Upset Stomach', 'Nausea', 'Vomiting', 'Diarrhea', 'Fatigue', 'Rash',
   'Earache', 'Congestion', 'Other'
 ];
 var HEALTH_CARE_PROVIDERS = ['Haley', 'Dave', 'Both'];
-var SYMPTOM_SEVERITY_LABELS = ['', 'Mild', 'Moderate', 'Severe'];
+var SYMPTOM_SEVERITY_LABELS = ['','Minor', 'Mild', 'Moderate', 'Severe'];
 
 // ── OUR PARENTING LOG ─────────────────────────────────────────────────────────
 var OUR_PARENTING_ACTIONS = [
@@ -161,10 +175,11 @@ var OUR_PARENTING_ACTIONS = [
   { id: 'modeled-coparenting',    label: 'Modeled positive co-parenting',            notify: false, decline: false },
   { id: 'other-intentional',      label: 'Other intentional parenting action',       notify: false, decline: false },
 ];
-var OUR_PARENTING_OUTCOMES = [
-  'Acknowledged by Mary',
-  'Ignored by Mary',
-  'Declined by Mary',
+var LIST_OUTCOMES = [
+  'Acknowledged No Response',
+  'Ignored',
+  'Accepted',
+  'Declined',
   'N/A',
 ];
 var OUR_PARENTING_NOTIFY_METHODS = ['CoParent app', 'Text', 'Email', 'Phone call'];

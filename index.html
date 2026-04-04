@@ -149,18 +149,13 @@
   </div>
   <div class="nav-sec">
     <div class="nav-lbl">Capture</div>
-    <button class="nb" onclick="nav('capture',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg></span> New Entry</button>
-    <button class="nb" onclick="nav('health',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 9.75v6.75m0 0-3-3m3 3 3-3" /></svg></span> Health & Medical</button>
+    <button class="nb" onclick="nav('capture',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg></span> Co-Parenting Log</button>
+    <button class="nb" onclick="nav('health',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-medical" viewBox="0 0 16 16"><path d="M8.5 4.5a.5.5 0 0 0-1 0v.634l-.549-.317a.5.5 0 1 0-.5.866L7 6l-.549.317a.5.5 0 1 0 .5.866l.549-.317V7.5a.5.5 0 1 0 1 0v-.634l.549.317a.5.5 0 1 0 .5-.866L9 6l.549-.317a.5.5 0 1 0-.5-.866l-.549.317zM5.5 9a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1z"/><path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1"/></svg></span> Health Log</button>
     <button class="nb" onclick="nav('memories',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg></span> Memories</button>
   </div>
   <div class="nav-sec">
-    <div class="nav-lbl">Capture</div>
-    <button class="nb" onclick="nav('our-parenting',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg></span> Our Parenting</button>
-  </div>
-  <div class="nav-sec">
     <div class="nav-lbl">Review</div>
-    <button class="nb" onclick="nav('viewlog',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg></span> Incident Log <span class="nc" id="nav-count">0</span></button>
-    <button class="nb" onclick="nav('our-parenting-log',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg></span> Our Parenting Log</button>
+    <button class="nb" onclick="nav('viewlog',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg></span> Review Entries <span class="nc" id="nav-count">0</span></button>
     <button class="nb" onclick="nav('export',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg></span> Export</button>
   </div>
   <div class="nav-sec">
@@ -199,7 +194,7 @@
   <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
 </svg>
 </div>
-      <div class="qa-label">View Log</div>
+      <div class="qa-label">Review Entries</div>
       <div class="qa-sub">Browse all entries</div>
     </button>
     <button class="qa-btn" onclick="nav('memories',null)">
@@ -210,6 +205,7 @@
       <div class="qa-label">Memories</div>
       <div class="qa-sub">Capture a good moment</div>
     </button>
+
     <button class="qa-btn" onclick="nav('export',null)">
       <div class="qa-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg></div>
       <div class="qa-label">Export</div>
@@ -290,7 +286,7 @@
 
     <!-- Step 5: Mary contact? -->
     <div class="flow-step" id="step-5">
-      <div class="flow-q">Any communication with Mary today?</div>
+      <div class="flow-q">Any interaction or communication with Mary today?</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:.5rem;">
         <button class="btn btn-p" onclick="setMaryContact(true)">Yes</button>
         <button class="btn" onclick="setMaryContact(false)">No</button>
@@ -299,15 +295,15 @@
 
     <!-- Step 6: Mary details -->
     <div class="flow-step" id="step-6">
-      <div class="flow-q">How did the communication go?</div>
+      <div class="flow-q">How did it go?</div>
       <div class="card">
-        <div class="ct">Interaction Quality (1 = Distressing, 5 = Pleasant)</div>
+        <div class="ct">Interaction Quality (1 = Pleasant, 5 = Distressing)</div>
         <div class="lk-track" id="mary-likert">
-          <button class="lk-btn" onclick="setMaryLikert(1,this)">1<br><span style="font-size:10px;font-weight:400">Distressing</span></button>
-          <button class="lk-btn" onclick="setMaryLikert(2,this)">2<br><span style="font-size:10px;font-weight:400">Difficult</span></button>
+          <button class="lk-btn" onclick="setMaryLikert(1,this)">1<br><span style="font-size:10px;font-weight:400">Pleasant</span></button>
+          <button class="lk-btn" onclick="setMaryLikert(2,this)">2<br><span style="font-size:10px;font-weight:400">Neutral</span></button>
           <button class="lk-btn" onclick="setMaryLikert(3,this)">3<br><span style="font-size:10px;font-weight:400">Tense</span></button>
-          <button class="lk-btn" onclick="setMaryLikert(4,this)">4<br><span style="font-size:10px;font-weight:400">Neutral</span></button>
-          <button class="lk-btn" onclick="setMaryLikert(5,this)">5<br><span style="font-size:10px;font-weight:400">Pleasant</span></button>
+          <button class="lk-btn" onclick="setMaryLikert(4,this)">4<br><span style="font-size:10px;font-weight:400">Difficult</span></button>
+          <button class="lk-btn" onclick="setMaryLikert(5,this)">5<br><span style="font-size:10px;font-weight:400">Distressing</span></button>
         </div>
       </div>
             <div class="card">
@@ -351,9 +347,9 @@
   </div>
 </div>
 
-<!-- NEW ENTRY (CAPTURE) -->
+<!-- CO-PARENTING LOG (CAPTURE) -->
 <div class="pg" id="pg-capture">
-  <h1 class="pg-title">New Entry</h1>
+  <h1 class="pg-title">Co-Parenting Log</h1>
   <p class="pg-sub">Log an observation, incident, or moment.</p>
 
   <div class="card">
@@ -367,11 +363,11 @@
     </div>
     <div class="fg">
       <div class="fg1">
-        <label class="fgl">Date & Time</label>
+        <label class="fgl">OccurrenceDate & Time</label>
         <input type="datetime-local" id="cap-date"/>
       </div>
       <div class="fg1">
-        <label class="fgl">Location</label>
+        <label class="fgl">Occurrence Location/Format</label>
         <select id="cap-location">
           <option value="">Select location...</option>
         </select>
@@ -388,9 +384,9 @@
     </div>
   </div>
 
-  <div class="card">
-    <div class="ct">Who Was Involved?</div>
-    <div class="kids-row" id="cap-people"></div>
+  <div class="card" id="direction-card" style="display:none;">
+    <div class="ct">Direction <span style="font-size:11px;color:var(--text3);font-weight:400;">— who initiated or was affected</span></div>
+    <div class="kids-row" id="cap-direction"></div>
   </div>
 
   <div class="card" id="source-card">
@@ -424,18 +420,9 @@
   </div>
 
   <div class="card">
-    <div class="fg1" style="margin-bottom:12px;">
+    <div class="fg1">
       <label class="fgl">Witnesses (optional)</label>
       <input type="text" id="cap-witnesses" placeholder="e.g. Dave present, teacher Mrs. Johnson"/>
-    </div>
-    <div class="fg1">
-      <label class="fgl">Attachments</label>
-      <div class="att-zone" onclick="document.getElementById('cap-files').click()">
-        <p>Click to attach files</p>
-        <small>Screenshots, texts, emails, photos, school records</small>
-        <input type="file" id="cap-files" multiple style="display:none" onchange="handleFiles(this.files)"/>
-      </div>
-      <div class="att-list" id="cap-att-list"></div>
     </div>
   </div>
 
@@ -447,9 +434,21 @@
     <div class="kids-row" id="cap-patterns-boys"></div>
   </div>
 
+  <div class="card">
+    <div class="fg1">
+      <label class="fgl">Attachments</label>
+      <div class="att-zone" onclick="document.getElementById('cap-files').click()">
+        <p>Click to attach files</p>
+        <small>Screenshots, texts, emails, photos, school records</small>
+        <input type="file" id="cap-files" multiple style="display:none" onchange="handleFiles(this.files)"/>
+      </div>
+      <div class="att-list" id="cap-att-list"></div>
+    </div>
+  </div>
+
   <div class="btn-row">
     <button class="btn" onclick="clearCapture()">Clear</button>
-    <button class="btn btn-p" onclick="saveEntry()">Save Entry</button>
+    <button class="btn btn-p" onclick="saveEntry()">Save Log Entry</button>
   </div>
   <div class="toast t-ok" id="cap-ok"></div>
   <div class="toast t-err" id="cap-err"></div>
@@ -484,14 +483,9 @@
     <div class="ct">Vitals</div>
     <div class="fg1" style="margin-bottom:14px;">
       <label class="fgl">Temperature (°F) <span style="font-size:11px;color:var(--text3);font-weight:400;">— optional</span></label>
-      <input type="number" id="health-temp" step="0.1" min="90" max="110" placeholder="e.g. 101.3" style="max-width:140px;"/>
+      <input type="number" id="health-temp" step="0.1" min="96" max="106" placeholder="98.6" style="max-width:140px;"/>
+       <input type="time" id="temp-time" style="max-width:140px;"/>
     </div>
-    <div class="ct" style="font-size:12px;margin-bottom:8px;">Severity / Significance</div>
-    <div class="severity-wrap">
-      <div class="sev-track" id="health-severity-track"></div>
-      <div class="sev-labels"><span>1 — Mild</span><span>5 — Serious</span></div>
-    </div>
-    <div class="fhint" style="margin-top:6px;" id="health-sev-hint"></div>
   </div>
 
   <div class="card">
@@ -761,6 +755,13 @@
         <option value="boys">Boys' Patterns</option>
       </select>
     </div>
+    <div class="fg1" style="margin-bottom:12px;">
+      <label class="fgl">Polarity</label>
+      <div class="kids-row">
+        <div class="kchip on" id="polarity-negative" onclick="selectPatternPolarity('negative')">− Negative / concerning</div>
+        <div class="kchip" id="polarity-positive" onclick="selectPatternPolarity('positive')">+ Positive / encouraging</div>
+      </div>
+    </div>
     <div class="btn-row">
       <button class="btn btn-p" onclick="addPattern()">Add Pattern</button>
     </div>
@@ -772,111 +773,6 @@
     <div class="ct">Current Patterns</div>
     <div id="patterns-manage-list"><div class="empty">Loading...</div></div>
   </div>
-</div>
-
-<!-- OUR PARENTING — ENTRY FORM -->
-<div class="pg" id="pg-our-parenting">
-  <h1 class="pg-title">Our Parenting</h1>
-  <p class="pg-sub">Log intentional parenting actions, JOD compliance, and good-faith co-parenting behaviors.</p>
-
-  <div class="card">
-    <div class="logger-row">
-      <span>Logging as</span>
-      <select id="op-logger" onchange="setLogger(this.value)">
-        <option value="Haley">Haley</option>
-        <option value="Dave">Dave</option>
-      </select>
-      <small>remembered on this device</small>
-    </div>
-    <div class="fg1">
-      <label class="fgl">Date & Time</label>
-      <input type="datetime-local" id="op-date"/>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="ct">Action Type</div>
-    <div class="kids-row" id="op-action-chips" style="flex-direction:column;align-items:flex-start;gap:7px;"></div>
-  </div>
-
-  <div id="op-decline-wrap" style="display:none;" class="card">
-    <div class="ct">Reason for Declining <span style="font-size:11px;color:var(--danger);font-weight:400;">— required</span></div>
-    <div class="fg1">
-      <textarea id="op-decline-reason" placeholder="What was requested and why we declined (be specific and factual)"></textarea>
-    </div>
-  </div>
-
-  <div id="op-notify-wrap" style="display:none;" class="card">
-    <div class="ct">Method of Notification <span style="font-size:11px;color:var(--danger);font-weight:400;">— required</span></div>
-    <div class="kids-row" id="op-notify-chips"></div>
-  </div>
-
-  <div class="card">
-    <div class="ct">Which Child(ren)?</div>
-    <div class="kids-row" id="op-kids-row"></div>
-  </div>
-
-  <div class="card">
-    <div class="ct">Notes</div>
-    <div class="fg1">
-      <textarea id="op-notes" placeholder="What specifically was done — be factual and concrete."></textarea>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="ct">Outcome</div>
-    <div class="kids-row" id="op-outcome-chips"></div>
-  </div>
-
-  <div class="btn-row">
-    <button class="btn" onclick="clearOurParenting()">Clear</button>
-    <button class="btn btn-p" onclick="saveOurParenting()">Save Entry</button>
-  </div>
-  <div class="toast t-ok" id="op-ok"></div>
-  <div class="toast t-err" id="op-err"></div>
-</div>
-
-<!-- OUR PARENTING — LOG VIEW -->
-<div class="pg" id="pg-our-parenting-log">
-  <h1 class="pg-title">Our Parenting Log</h1>
-  <p class="pg-sub">Our intentional actions, JOD compliance efforts, and good-faith behaviors.</p>
-
-  <div class="card">
-    <div class="ct">Filter</div>
-    <div class="fg" style="gap:12px;">
-      <div class="fg1">
-        <label class="fgl">Action type</label>
-        <select id="opl-filter-action">
-          <option value="">All actions</option>
-        </select>
-      </div>
-      <div class="fg1">
-        <label class="fgl">Child</label>
-        <select id="opl-filter-kid">
-          <option value="">All children</option>
-          <option value="Landon">Landon</option>
-          <option value="Luke">Luke</option>
-          <option value="Leo">Leo</option>
-          <option value="All">All (together)</option>
-        </select>
-      </div>
-      <div class="fg1">
-        <label class="fgl">From</label>
-        <input type="date" id="opl-filter-from"/>
-      </div>
-      <div class="fg1">
-        <label class="fgl">To</label>
-        <input type="date" id="opl-filter-to"/>
-      </div>
-    </div>
-    <div class="btn-row" style="margin-top:8px;">
-      <button class="btn" onclick="applyOpFilter()">Apply</button>
-      <button class="btn" onclick="clearOpFilter()">Clear filters</button>
-    </div>
-  </div>
-
-  <div id="op-log-count" style="font-size:12px;color:var(--text3);margin-bottom:10px;"></div>
-  <div id="op-log-list"><div class="empty">Loading...</div></div>
 </div>
 
 <!-- VIEW LOG -->
@@ -900,6 +796,17 @@
       <button class="fpill" onclick="setFilter('reflection',this)">Reflections</button>
       <button class="fpill" onclick="setFilter('Haley',this)">By Haley</button>
       <button class="fpill" onclick="setFilter('Dave',this)">By Dave</button>
+    </div>
+    <div class="feed-controls">
+      <input type="search" id="feed-search" placeholder="Search entries…" oninput="renderFeed()" style="flex:1;min-width:160px;"/>
+      <input type="date" id="feed-from" onchange="renderFeed()" title="Incident date from"/>
+      <input type="date" id="feed-to" onchange="renderFeed()" title="Incident date to"/>
+      <select id="feed-sort" onchange="renderFeed()">
+        <option value="logged-desc">Logged: newest first</option>
+        <option value="logged-asc">Logged: oldest first</option>
+        <option value="incident-desc">Incident date: newest first</option>
+        <option value="incident-asc">Incident date: oldest first</option>
+      </select>
     </div>
     <div id="entries-list"><div class="empty">Loading...</div></div>
   </div>

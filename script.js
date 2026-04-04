@@ -17,14 +17,21 @@ var allEntries = [];
 var allPatterns = [];
 var currentFilter = 'all';
 var currentPersonFilter = null;
-var expCats = ['kids', 'parenting', 'coparenting', 'reflection'];
+var expCats = ['kids', 'parenting', 'coparenting', 'coparenting-positive', 'reflection'];
 
 // Capture form state
-var capPeople = [];
 var capSource = '';
 var capCategory = '';
 var capSeverity = 0;
 var capPatterns = [];
+var capDirection = '';
+
+var DIRECTION_OPTIONS = {
+  'kids':                ['Kids → Us', 'Kids → Mary'],
+  'parenting':           ['Mary → Kids', 'Us → Kids'],
+  'coparenting':         ['Mary → Us', 'Us → Mary'],
+  'coparenting-positive':['Us → Mary', 'Mary → Us'],
+};
 
 // Health form state
 var healthKid = '';
@@ -219,8 +226,6 @@ function nav(page, btn) {
   if (page === 'capture') { setNow('cap-date'); loadLogger(); }
   if (page === 'health') initHealthPage();
   if (page === 'memories') initMemoriesPage();
-  if (page === 'our-parenting') initOurParentingPage();
-  if (page === 'our-parenting-log') initOpLog();
   if (page === 'manage-habits') initManageHabits();
   if (page === 'manage-patterns') initManagePatterns();
   if (page === 'settings') renderThemePicker();
@@ -397,11 +402,19 @@ function renderPatternChips() {
   if (!maryEl || !boysEl) return;
   var mary = allPatterns.filter(function (p) { return p.category === 'mary'; });
   var boys = allPatterns.filter(function (p) { return p.category === 'boys'; });
+  function sortByPolarity(a, b) {
+    if (a.polarity === b.polarity) return 0;
+    return a.polarity === 'negative' ? -1 : 1;
+  }
+  mary.sort(sortByPolarity);
+  boys.sort(sortByPolarity);
   maryEl.innerHTML = mary.map(function (p) {
-    return '<div class="kchip pchip pchip-mary" id="pchip-' + p.slug + '" title="' + p.description + '" onclick="toggleCapPattern(\'' + p.slug + '\')">' + p.label + '</div>';
+    var indicator = p.polarity === 'positive' ? '+ ' : '− ';
+    return '<div class="kchip pchip pchip-mary" id="pchip-' + p.slug + '" title="' + p.description + '" onclick="toggleCapPattern(\'' + p.slug + '\')">' + indicator + p.label + '</div>';
   }).join('');
   boysEl.innerHTML = boys.map(function (p) {
-    return '<div class="kchip pchip pchip-boys" id="pchip-' + p.slug + '" title="' + p.description + '" onclick="toggleCapPattern(\'' + p.slug + '\')">' + p.label + '</div>';
+    var indicator = p.polarity === 'positive' ? '+ ' : '− ';
+    return '<div class="kchip pchip pchip-boys" id="pchip-' + p.slug + '" title="' + p.description + '" onclick="toggleCapPattern(\'' + p.slug + '\')">' + indicator + p.label + '</div>';
   }).join('');
 }
 
@@ -412,10 +425,21 @@ function toggleCapPattern(slug) {
   if (el) el.classList.toggle('on', capPatterns.includes(slug));
 }
 
+var newPatternPolarity = 'negative';
+
+function selectPatternPolarity(val) {
+  newPatternPolarity = val;
+  document.getElementById('polarity-negative').classList.toggle('on', val === 'negative');
+  document.getElementById('polarity-positive').classList.toggle('on', val === 'positive');
+}
+
 function initManagePatterns() {
   document.getElementById('new-pattern-label').value = '';
   document.getElementById('new-pattern-desc').value = '';
   document.getElementById('new-pattern-category').value = 'mary';
+  newPatternPolarity = 'negative';
+  document.getElementById('polarity-negative').classList.add('on');
+  document.getElementById('polarity-positive').classList.remove('on');
   renderPatternsList();
 }
 
@@ -426,7 +450,7 @@ async function addPattern() {
   if (!label) { showToast('mp', 'err', 'Please enter a pattern label.'); return; }
   var slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   var maxOrder = allPatterns.filter(function (p) { return p.category === category; }).reduce(function (m, p) { return Math.max(m, p.sort_order); }, 0);
-  var { data, error } = await sb.from('patterns').insert({ slug: slug, label: label, description: desc, category: category, sort_order: maxOrder + 1 }).select();
+  var { data, error } = await sb.from('patterns').insert({ slug: slug, label: label, description: desc, category: category, sort_order: maxOrder + 1, polarity: newPatternPolarity }).select();
   if (error) { showToast('mp', 'err', 'Save failed: ' + error.message); return; }
   allPatterns.push(data[0]);
   showToast('mp', 'ok', 'Pattern added.');
@@ -455,7 +479,7 @@ function renderPatternsList() {
       list.map(function (p) {
         return '<div class="mh-item">' +
           '<div class="mh-body">' +
-          '<div class="mh-name">' + p.label + '</div>' +
+          '<div class="mh-name">' + (p.polarity === 'positive' ? '+ ' : '− ') + p.label + '</div>' +
           (p.description ? '<div class="mh-kids">' + p.description + '</div>' : '') +
           '</div>' +
           '<button class="btn" onclick="deletePattern(\'' + p.id + '\')" style="flex-shrink:0;font-size:12px;padding:4px 10px;">Remove</button>' +
@@ -480,12 +504,6 @@ function initCapturePage() {
       '<div class="cat-name">' + cat.name + '</div>' +
       '<div class="cat-desc">' + cat.description + '</div>' +
       '</div>';
-  }).join('');
-
-  // Build people chips
-  var peopleEl = document.getElementById('cap-people');
-  peopleEl.innerHTML = ALL_PEOPLE.map(function (p) {
-    return '<div class="kchip" id="capchip-' + p + '" onclick="togglePerson(\'' + p + '\')">' + p + '</div>';
   }).join('');
 
   // Build source chips
@@ -521,9 +539,23 @@ function selectCategory(id) {
   typeSel.innerHTML = '<option value="">Select type...</option>' +
     cat.types.map(function (t) { return '<option value="' + t.id + '">' + t.name + '</option>'; }).join('');
 
-  // Hide source card for memories
+  // Hide source/severity cards for memories
   document.getElementById('source-card').style.display = id === 'memories' ? 'none' : 'block';
   document.getElementById('severity-card').style.display = id === 'memories' ? 'none' : 'block';
+
+  // Show direction chips for applicable categories
+  var dirCard = document.getElementById('direction-card');
+  var dirEl = document.getElementById('cap-direction');
+  var dirOptions = DIRECTION_OPTIONS[id];
+  capDirection = '';
+  if (dirOptions && dirOptions.length) {
+    dirEl.innerHTML = dirOptions.map(function (d) {
+      return '<div class="kchip" id="dirchip-' + d.replace(/[^a-z]/gi, '') + '" onclick="selectDirection(\'' + d + '\')">' + d + '</div>';
+    }).join('');
+    dirCard.style.display = 'block';
+  } else {
+    dirCard.style.display = 'none';
+  }
 
   // Set default severity when type changes
   typeSel.onchange = function () {
@@ -532,12 +564,12 @@ function selectCategory(id) {
   };
 }
 
-function togglePerson(name) {
-  if (capPeople.includes(name)) capPeople = capPeople.filter(function (p) { return p !== name; });
-  else capPeople.push(name);
-  ALL_PEOPLE.forEach(function (p) {
-    var el = document.getElementById('capchip-' + p);
-    if (el) el.classList.toggle('on', capPeople.includes(p));
+function selectDirection(val) {
+  capDirection = val;
+  var options = DIRECTION_OPTIONS[capCategory] || [];
+  options.forEach(function (d) {
+    var el = document.getElementById('dirchip-' + d.replace(/[^a-z]/gi, ''));
+    if (el) el.classList.toggle('on', d === val);
   });
 }
 
@@ -580,7 +612,7 @@ function renderAtts() {
 function rmAtt(i) { capAtts.splice(i, 1); renderAtts(); }
 
 function clearCapture() {
-  capPeople = []; capSource = ''; capCategory = ''; capSeverity = 0; capAtts = []; capPatterns = [];
+  capSource = ''; capCategory = ''; capSeverity = 0; capAtts = []; capPatterns = []; capDirection = '';
   allPatterns.forEach(function (p) { var el = document.getElementById('pchip-' + p.slug); if (el) el.classList.remove('on'); });
   document.getElementById('cap-facts').value = '';
   document.getElementById('cap-assessment').value = '';
@@ -589,8 +621,9 @@ function clearCapture() {
   document.getElementById('cap-location').value = '';
   document.getElementById('cap-type').innerHTML = '';
   document.getElementById('type-wrap').style.display = 'none';
+  document.getElementById('direction-card').style.display = 'none';
+  document.getElementById('cap-direction').innerHTML = '';
   document.querySelectorAll('.cat-btn').forEach(function (b) { b.classList.remove('on'); b.style.borderColor = ''; b.style.background = ''; });
-  ALL_PEOPLE.forEach(function (p) { var el = document.getElementById('capchip-' + p); if (el) el.classList.remove('on'); });
   INFO_SOURCES.forEach(function (s) { var el = document.getElementById('srchip-' + s.id); if (el) el.classList.remove('on'); });
   [1,2,3,4,5].forEach(function (i) { var btn = document.getElementById('sevbtn-' + i); if (btn) btn.className = 'sev-btn'; });
   document.getElementById('sev-hint').textContent = '';
@@ -609,7 +642,7 @@ async function saveEntry() {
   if (!facts) { showToast('cap', 'err', 'Please describe what happened in the Facts field.'); return; }
   if (!category) { showToast('cap', 'err', 'Please select a category.'); return; }
   if (!type) { showToast('cap', 'err', 'Please select a type.'); return; }
-  if (!capPeople.length) { showToast('cap', 'err', 'Please select who was involved.'); return; }
+  if (DIRECTION_OPTIONS[category] && !capDirection) { showToast('cap', 'err', 'Please select a direction.'); return; }
 
   var locId = document.getElementById('cap-location').value;
   var loc = LOCATIONS.find(function (l) { return l.id === locId; });
@@ -626,7 +659,8 @@ async function saveEntry() {
     entry_date: new Date(document.getElementById('cap-date').value || Date.now()).toISOString(),
     logger: ls('logger') || 'Haley',
     user_id: currentUser.id,
-    people: capPeople.slice(),
+    direction: capDirection || null,
+    people: [],
     location: loc ? loc.name : '',
     info_source: srcObj ? srcObj.name : capSource,
     facts: facts,
@@ -1007,7 +1041,7 @@ function initOurParentingPage() {
 
   // Outcome chips — single select
   var outcomeEl = document.getElementById('op-outcome-chips');
-  if (outcomeEl) outcomeEl.innerHTML = OUR_PARENTING_OUTCOMES.map(function (o) {
+  if (outcomeEl) outcomeEl.innerHTML = LIST_OUTCOMES.map(function (o) {
     var id = o.replace(/\s+/g,'-').toLowerCase();
     return '<div class="kchip" id="opout-' + id + '" onclick="selectOpOutcome(\'' + o + '\')">' + o + '</div>';
   }).join('');
@@ -1062,7 +1096,7 @@ function selectOpNotify(method) {
 
 function selectOpOutcome(outcome) {
   opOutcome = (opOutcome === outcome) ? '' : outcome;
-  OUR_PARENTING_OUTCOMES.forEach(function (o) {
+  LIST_OUTCOMES.forEach(function (o) {
     var el = document.getElementById('opout-' + o.replace(/\s+/g,'-').toLowerCase());
     if (el) el.classList.toggle('on', o === opOutcome);
   });
@@ -1407,10 +1441,15 @@ async function uploadAttachments(atts) {
     var path = currentUser.id + '/' + Date.now() + '_' + a.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
     var { error } = await sb.storage.from('attachments').upload(path, a.file);
     if (error) { showToast('att', 'err', 'Upload failed: ' + a.name + ' — ' + error.message); results.push({ name: a.name, size: a.size, type: a.type }); continue; }
-    var { data } = sb.storage.from('attachments').getPublicUrl(path);
-    results.push({ name: a.name, size: a.size, type: a.type, url: data.publicUrl, path: path });
+    results.push({ name: a.name, size: a.size, type: a.type, path: path });
   }
   return results;
+}
+
+async function openAttachment(path) {
+  var { data, error } = await sb.storage.from('attachments').createSignedUrl(path, 300);
+  if (error || !data) { alert('Could not open attachment: ' + (error ? error.message : 'unknown error')); return; }
+  window.open(data.signedUrl, '_blank', 'noopener');
 }
 
 async function saveToSupabase(entry, prefix) {
@@ -1458,13 +1497,37 @@ function setFilter(f, el) {
 
 function renderFeed() {
   var list = document.getElementById('entries-list');
+  var search = (document.getElementById('feed-search') || {}).value || '';
+  var searchLc = search.toLowerCase();
+  var fromVal = (document.getElementById('feed-from') || {}).value || '';
+  var toVal = (document.getElementById('feed-to') || {}).value || '';
+  var sort = (document.getElementById('feed-sort') || {}).value || 'logged-desc';
+
   var filtered = allEntries.filter(function (e) {
-    if (currentFilter === 'all') return true;
-    if (currentFilter === 'reflection') return e.entry_type === 'reflection';
-    if (currentFilter === 'Haley' || currentFilter === 'Dave') return e.logger === currentFilter;
-    return e.category === currentFilter;
+    if (currentFilter !== 'all') {
+      if (currentFilter === 'reflection' && e.entry_type !== 'reflection') return false;
+      if (currentFilter === 'Haley' || currentFilter === 'Dave') { if (e.logger !== currentFilter) return false; }
+      else if (currentFilter !== 'reflection' && e.category !== currentFilter) return false;
+    }
+    // Date range filters on incident/entry date
+    if (fromVal && e.entry_date < new Date(fromVal).toISOString()) return false;
+    if (toVal && e.entry_date > new Date(toVal + 'T23:59:59').toISOString()) return false;
+    // Search across facts, assessment, quote, type_name, category_name, people
+    if (searchLc) {
+      var haystack = [e.facts, e.assessment, e.quote, e.type_name, e.category_name,
+        (e.people || []).join(' '), e.location, e.info_source, e.witnesses].join(' ').toLowerCase();
+      if (haystack.indexOf(searchLc) === -1) return false;
+    }
+    return true;
   });
-  if (!filtered.length) { list.innerHTML = '<div class="empty">No entries match this filter.</div>'; return; }
+
+  filtered.sort(function (a, b) {
+    var da = sort.startsWith('incident') ? a.entry_date : a.created_at;
+    var db = sort.startsWith('incident') ? b.entry_date : b.created_at;
+    return sort.endsWith('asc') ? (da < db ? -1 : da > db ? 1 : 0) : (db < da ? -1 : db > da ? 1 : 0);
+  });
+
+  if (!filtered.length) { list.innerHTML = '<div class="empty">No entries match.</div>'; return; }
   list.innerHTML = filtered.map(renderEntryCard).join('');
 }
 
@@ -1483,10 +1546,14 @@ function renderByPerson(person) {
 }
 
 function renderEntryCard(e) {
-  var d = new Date(e.entry_date || e.created_at);
-  var ds = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) +
-    ' · ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  var people = (e.people || []).join(', ');
+  var incidentDate = new Date(e.entry_date);
+  var loggedDate = new Date(e.created_at);
+  var incidentDs = incidentDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) +
+    ' · ' + incidentDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  var sameDay = incidentDate.toDateString() === loggedDate.toDateString();
+  var loggedDs = sameDay ? null :
+    'Logged ' + loggedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  var ds = incidentDs;
   var atts = e.attachments || [];
   var pats = (e.pattern_tags || []).map(function (slug) {
     var p = allPatterns.find(function (x) { return x.slug === slug; });
@@ -1550,12 +1617,12 @@ function renderEntryCard(e) {
         '<span class="bdg ' + (e.logger === 'Dave' ? 'b-d' : 'b-h') + '">' + e.logger + '</span>' +
         '<span class="bdg ' + catBadgeClass + '">' + (e.category_name || e.category) + '</span>' +
         (e.type_name ? '<span class="bdg b-type">' + e.type_name + '</span>' : '') +
-        (people ? '<span class="bdg b-kid">' + people + '</span>' : '') +
+        (e.direction ? '<span class="bdg b-kid">' + e.direction + '</span>' : '') +
         (e.location ? '<span class="bdg b-loc">' + e.location + '</span>' : '') +
         (e.info_source ? '<span class="bdg b-source">' + e.info_source + '</span>' : '') +
         transitionBadge +
       '</div>' +
-      '<span class="edate">' + ds + '</span>' +
+      '<div class="edate-wrap"><span class="edate">' + ds + '</span>' + (loggedDs ? '<span class="edate-logged">' + loggedDs + '</span>' : '') + '</div>' +
     '</div>' +
     (body ? '<div class="ebody">' + body + '</div>' : '') +
     (e.facts ? '<div class="facts-block"><div class="facts-label">Facts</div><div class="facts-text">' + e.facts + '</div></div>' : '') +
@@ -1563,7 +1630,7 @@ function renderEntryCard(e) {
     (e.quote ? '<div class="equote">"' + e.quote + '"</div>' : '') +
     (e.severity ? '<div class="escale"><span class="stag">Severity ' + e.severity + '/5</span></div>' : '') +
     (e.witnesses ? '<div class="ewit">Witnesses: ' + e.witnesses + '</div>' : '') +
-    (atts.length ? '<div class="eatts">' + atts.map(function (a) { return a.url ? '<a class="atag" href="' + a.url + '" target="_blank" rel="noopener">' + a.name + '</a>' : '<span class="atag">' + a.name + '</span>'; }).join('') + '</div>' : '') +
+    (atts.length ? '<div class="eatts">' + atts.map(function (a) { return a.path ? '<button class="atag atag-btn" onclick="openAttachment(\'' + a.path.replace(/'/g, "\\'") + '\')">' + a.name + '</button>' : '<span class="atag">' + a.name + '</span>'; }).join('') + '</div>' : '') +
     (pats.length ? '<div class="epats">' + pats.map(function (p) { return '<span class="ptag ptag-' + p.cat + '">' + p.label + '</span>'; }).join('') + '</div>' : '') +
     '</div>';
 }
