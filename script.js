@@ -229,6 +229,7 @@ function nav(page, btn) {
   if (page === 'manage-habits') initManageHabits();
   if (page === 'manage-patterns') initManagePatterns();
   if (page === 'settings') renderThemePicker();
+  if (page === 'analytics') initAnalytics();
 }
 
 // ── THEME ──────────────────────────────────────────────────────────────────────
@@ -398,24 +399,28 @@ async function loadPatterns() {
 
 function renderPatternChips() {
   var maryEl = document.getElementById('cap-patterns-mary');
+  var usEl   = document.getElementById('cap-patterns-us');
   var boysEl = document.getElementById('cap-patterns-boys');
   if (!maryEl || !boysEl) return;
   var mary = allPatterns.filter(function (p) { return p.category === 'mary'; });
+  var us   = allPatterns.filter(function (p) { return p.category === 'us'; });
   var boys = allPatterns.filter(function (p) { return p.category === 'boys'; });
   function sortByPolarity(a, b) {
     if (a.polarity === b.polarity) return 0;
     return a.polarity === 'negative' ? -1 : 1;
   }
   mary.sort(sortByPolarity);
+  us.sort(sortByPolarity);
   boys.sort(sortByPolarity);
-  maryEl.innerHTML = mary.map(function (p) {
-    var indicator = p.polarity === 'positive' ? '+ ' : '− ';
-    return '<div class="kchip pchip pchip-mary" id="pchip-' + p.slug + '" title="' + p.description + '" onclick="toggleCapPattern(\'' + p.slug + '\')">' + indicator + p.label + '</div>';
-  }).join('');
-  boysEl.innerHTML = boys.map(function (p) {
-    var indicator = p.polarity === 'positive' ? '+ ' : '− ';
-    return '<div class="kchip pchip pchip-boys" id="pchip-' + p.slug + '" title="' + p.description + '" onclick="toggleCapPattern(\'' + p.slug + '\')">' + indicator + p.label + '</div>';
-  }).join('');
+  function makeChips(list, cls) {
+    return list.map(function (p) {
+      var indicator = p.polarity === 'positive' ? '+ ' : '− ';
+      return '<div class="kchip pchip ' + cls + '" id="pchip-' + p.slug + '" title="' + p.description + '" onclick="toggleCapPattern(\'' + p.slug + '\')">' + indicator + p.label + '</div>';
+    }).join('');
+  }
+  maryEl.innerHTML = makeChips(mary, 'pchip-mary');
+  if (usEl) usEl.innerHTML = makeChips(us, 'pchip-us');
+  boysEl.innerHTML = makeChips(boys, 'pchip-boys');
 }
 
 function toggleCapPattern(slug) {
@@ -472,6 +477,7 @@ function renderPatternsList() {
   var el = document.getElementById('patterns-manage-list');
   if (!allPatterns.length) { el.innerHTML = '<div class="empty">No patterns yet.</div>'; return; }
   var mary = allPatterns.filter(function (p) { return p.category === 'mary'; });
+  var us = allPatterns.filter(function (p) { return p.category === 'us'; });
   var boys = allPatterns.filter(function (p) { return p.category === 'boys'; });
   function renderGroup(title, list) {
     if (!list.length) return '';
@@ -486,7 +492,7 @@ function renderPatternsList() {
           '</div>';
       }).join('');
   }
-  el.innerHTML = renderGroup("Mary's Behavior", mary) + renderGroup("Boys' Patterns", boys);
+  el.innerHTML = renderGroup("Mary's Behavior", mary) + renderGroup("Our Patterns", us) + renderGroup("Boys' Patterns", boys);
 }
 
 // ── CAPTURE PAGE INIT ─────────────────────────────────────────────────────────
@@ -1826,6 +1832,725 @@ function showToast(prefix, type, msg) {
   el.textContent = msg;
   el.style.display = 'block';
   setTimeout(function () { el.style.display = 'none'; }, 4000);
+}
+
+// ── DATA ANALYSIS ─────────────────────────────────────────────────────────────
+// ── MARY'S MOOD LOG ───────────────────────────────────────────────────────────
+var moodLogMood = '';
+var moodLogFormats = [];
+var moodLogKids = null;
+
+function openMoodLog() {
+  moodLogMood = '';
+  moodLogFormats = [];
+  moodLogKids = null;
+
+  var today = new Date();
+  document.getElementById('ml-date').value = today.toISOString().slice(0, 10);
+  document.getElementById('ml-notes').value = '';
+
+  var moodEl = document.getElementById('ml-mood-chips');
+  moodEl.innerHTML = MARY_MOODS.map(function (m) {
+    return '<div class="kchip ml-mood-chip ' + m.polarity + '" id="mlm-' + m.label + '" onclick="selectMoodLogMood(\'' + m.label + '\')">' + m.label + '</div>';
+  }).join('');
+
+  var fmtEl = document.getElementById('ml-format-chips');
+  fmtEl.innerHTML = MARY_FORMATS.map(function (f) {
+    var id = 'mlf-' + f.replace(/\W+/g, '');
+    return '<div class="kchip" id="' + id + '" onclick="toggleMoodLogFormat(\'' + f + '\')">' + f + '</div>';
+  }).join('');
+
+  document.getElementById('ml-kids-yes').classList.remove('on');
+  document.getElementById('ml-kids-no').classList.remove('on');
+  document.getElementById('ml-ok').textContent = '';
+  document.getElementById('ml-err').textContent = '';
+
+  document.getElementById('mood-log-overlay').classList.add('open');
+}
+
+function closeMoodLog(e) {
+  if (e && e.target !== document.getElementById('mood-log-overlay')) return;
+  document.getElementById('mood-log-overlay').classList.remove('open');
+}
+
+function closeMoodLogBtn() {
+  document.getElementById('mood-log-overlay').classList.remove('open');
+}
+
+function selectMoodLogMood(label) {
+  moodLogMood = label;
+  MARY_MOODS.forEach(function (m) {
+    var el = document.getElementById('mlm-' + m.label);
+    if (el) el.classList.toggle('on', m.label === label);
+  });
+}
+
+function toggleMoodLogFormat(f) {
+  var id = 'mlf-' + f.replace(/\W+/g, '');
+  if (moodLogFormats.includes(f)) {
+    moodLogFormats = moodLogFormats.filter(function (x) { return x !== f; });
+  } else {
+    moodLogFormats.push(f);
+  }
+  var el = document.getElementById(id);
+  if (el) el.classList.toggle('on', moodLogFormats.includes(f));
+}
+
+function setMoodLogKids(val) {
+  moodLogKids = val;
+  document.getElementById('ml-kids-yes').classList.toggle('on', val === true);
+  document.getElementById('ml-kids-no').classList.toggle('on', val === false);
+}
+
+async function saveMoodLog() {
+  if (!moodLogMood) { showToast('ml', 'err', 'Please select a mood.'); return; }
+  var dateVal = document.getElementById('ml-date').value;
+  if (!dateVal) { showToast('ml', 'err', 'Please select a date.'); return; }
+
+  var entry = {
+    entry_date: new Date(dateVal + 'T12:00:00').toISOString(),
+    entry_type: 'mood-log',
+    category: 'mary-mood',
+    entry_subtype: moodLogMood,
+    logger: getLoggerName(currentUser.email),
+    user_id: currentUser.id,
+    facts: document.getElementById('ml-notes').value.trim(),
+    mary_feelings: moodLogFormats,
+    kids_home: moodLogKids,
+  };
+
+  var { data, error } = await sb.from('entries').insert(entry).select();
+  if (error) { showToast('ml', 'err', 'Save failed: ' + error.message); return; }
+  allEntries.unshift(Array.isArray(data) ? data[0] : data);
+  showToast('ml', 'ok', 'Saved!');
+  updateCount();
+  setTimeout(closeMoodLogBtn, 900);
+}
+
+function captureLater() {
+  var dateVal = document.getElementById('ml-date').value;
+  var notes = document.getElementById('ml-notes').value.trim();
+  var moodPrefix = moodLogMood
+    ? '[Mary: ' + moodLogMood + (moodLogFormats.length ? ' — ' + moodLogFormats.join(', ') : '') + ']\n'
+    : '';
+  closeMoodLogBtn();
+  nav('capture', null);
+  setTimeout(function () {
+    var capDate = document.getElementById('cap-date');
+    if (capDate && dateVal) capDate.value = dateVal;
+    var capFacts = document.getElementById('cap-facts');
+    if (capFacts) capFacts.value = moodPrefix + notes;
+  }, 60);
+}
+
+// ── ANALYTICS ─────────────────────────────────────────────────────────────────
+var anaView = 'all';
+var anaMode = 'charts';
+var anaGran = 'month';
+var anaCharts = {};
+var anaPatternTimePats = []; // selected slugs for pattern timeline; empty = auto top 5
+
+function initAnalytics() {
+  Promise.all([
+    allEntries.length ? Promise.resolve() : loadEntries(),
+    allOpEntries.length ? Promise.resolve() : loadOpEntries(),
+  ]).then(renderAnalytics);
+}
+
+function setAnaView(view, el) {
+  anaView = view;
+  anaPatternTimePats = []; // reset pattern filter on view change
+  document.querySelectorAll('#ana-view-tabs .vtab').forEach(function (b) { b.classList.remove('active'); });
+  el.classList.add('active');
+  renderAnalytics();
+}
+
+function setAnaMode(mode) {
+  anaMode = mode;
+  document.getElementById('ana-charts-view').style.display = mode === 'charts' ? '' : 'none';
+  document.getElementById('ana-table-view').style.display = mode === 'table' ? '' : 'none';
+  document.getElementById('ana-btn-charts').className = mode === 'charts' ? 'btn btn-p' : 'btn';
+  document.getElementById('ana-btn-table').className = mode === 'table' ? 'btn btn-p' : 'btn';
+  if (mode === 'table') renderAnaTable();
+}
+
+function setAnaGran(gran) {
+  anaGran = gran;
+  document.getElementById('ana-gran-week').classList.toggle('active', gran === 'week');
+  document.getElementById('ana-gran-month').classList.toggle('active', gran === 'month');
+  renderAnalytics();
+}
+
+function getAnaFiltered() {
+  var from = (document.getElementById('ana-from') || {}).value || '';
+  var to = (document.getElementById('ana-to') || {}).value || '';
+  var kid = (document.getElementById('ana-kid') || {}).value || '';
+  var logger = (document.getElementById('ana-logger') || {}).value || '';
+
+  function dateOk(dateStr) {
+    if (!dateStr) return false;
+    if (from && dateStr < new Date(from).toISOString()) return false;
+    if (to && dateStr > new Date(to + 'T23:59:59').toISOString()) return false;
+    return true;
+  }
+
+  var entries = allEntries.filter(function (e) {
+    if (!dateOk(e.entry_date)) return false;
+    if (logger && e.logger !== logger) return false;
+    if (kid) {
+      var inPeople = (e.people || []).includes(kid);
+      var isKid = e.kid === kid;
+      var inMoods = e.moods && e.moods[kid];
+      if (!inPeople && !isKid && !inMoods) return false;
+    }
+    if (anaView === 'incident') {
+      var incidentCats = ['kids', 'parenting', 'coparenting', 'coparenting-positive'];
+      if (!incidentCats.includes(e.category) && e.entry_type !== 'reflection') return false;
+    } else if (anaView === 'parenting') {
+      return false;
+    } else if (anaView === 'health') {
+      if (e.category !== 'health') return false;
+    } else if (anaView === 'memories') {
+      if (e.category !== 'memories') return false;
+    }
+    return true;
+  });
+
+  var opEntries = allOpEntries.filter(function (e) {
+    if (!dateOk(e.entry_date)) return false;
+    if (logger && e.logger !== logger) return false;
+    if (kid) {
+      var opKidList = e.kids || [];
+      if (!opKidList.includes(kid) && !opKidList.includes('All')) return false;
+    }
+    if (anaView === 'incident' || anaView === 'health' || anaView === 'memories') return false;
+    return true;
+  });
+
+  return { entries: entries, opEntries: opEntries };
+}
+
+function anaFormatPeriod(periodStr) {
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if (periodStr.includes('-W')) {
+    var wp = periodStr.split('-W');
+    return 'Wk ' + parseInt(wp[1], 10) + ' \'' + wp[0].slice(2);
+  }
+  var pp = periodStr.split('-');
+  return MONTHS[parseInt(pp[1], 10) - 1] + ' ' + pp[0];
+}
+
+function anaTimePeriod(dateStr, gran) {
+  var d = new Date(dateStr);
+  if (gran === 'month') {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+  // ISO week number
+  var d2 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  var day = d2.getUTCDay() || 7;
+  d2.setUTCDate(d2.getUTCDate() + 4 - day);
+  var yearStart = new Date(Date.UTC(d2.getUTCFullYear(), 0, 1));
+  var week = Math.ceil((((d2 - yearStart) / 86400000) + 1) / 7);
+  return d2.getUTCFullYear() + '-W' + String(week).padStart(2, '0');
+}
+
+function anaDestroyChart(key) {
+  if (anaCharts[key]) { anaCharts[key].destroy(); delete anaCharts[key]; }
+}
+
+function anaShowOrEmpty(wrapId, emptyId, hasData) {
+  var wrap = document.getElementById(wrapId);
+  var empty = document.getElementById(emptyId);
+  if (wrap) wrap.style.display = hasData ? '' : 'none';
+  if (empty) empty.style.display = hasData ? 'none' : '';
+}
+
+function renderAnalytics() {
+  var d = getAnaFiltered();
+  renderAnaStats(d.entries, d.opEntries);
+  renderAnaFreqChart(d.entries, d.opEntries);
+  renderAnaPatternBars(d.entries);
+  renderAnaPatternTimeline(d.entries);
+  renderAnaTopPatterns(d.entries);
+  renderAnaRatioChart(d.entries, d.opEntries);
+
+  // Show/hide contextual cards
+  var showSev = ['all', 'incident'].includes(anaView);
+  var showPatterns = ['all', 'incident'].includes(anaView);
+  var showRatio = ['all', 'incident', 'parenting'].includes(anaView);
+  document.getElementById('ana-severity-box').style.display = showSev ? '' : 'none';
+  document.getElementById('ana-patterns-box').style.display = showPatterns ? '' : 'none';
+  document.getElementById('ana-top-patterns-box').style.display = showPatterns ? '' : 'none';
+  document.getElementById('ana-ratio-box').style.display = showRatio ? '' : 'none';
+}
+
+// ── STAT CARDS ────────────────────────────────────────────────────────────────
+function renderAnaStats(entries, opEntries) {
+  var el = document.getElementById('ana-stat-grid');
+  if (!el) return;
+  var total = entries.length + opEntries.length;
+
+  // ── Card 2: Habits Tracked ────────────────────────────────────────────────
+  var posPats = allPatterns.filter(function (p) { return p.category === 'boys'; });
+  var usPats = allPatterns.filter(function (p) { return p.category === 'us'; });
+  var negPats = allPatterns.filter(function (p) { return p.category === 'mary'; });
+  var posSlugs = posPats.map(function (p) { return p.slug; });
+  var negSlugs = negPats.map(function (p) { return p.slug; });
+  var posLogged = 0, negLogged = 0;
+  entries.forEach(function (e) {
+    (e.pattern_tags || []).forEach(function (slug) {
+      if (posSlugs.includes(slug)) posLogged++;
+      else if (negSlugs.includes(slug)) negLogged++;
+    });
+  });
+
+  // ── Card 3: Communication Climate ────────────────────────────────────────
+  var climateEntries = entries.filter(function (e) {
+    return ['coparenting', 'coparenting-positive', 'parenting'].includes(e.category);
+  });
+  var posWeight = 0, negWeight = 0;
+  climateEntries.forEach(function (e) {
+    var isPositive = e.category === 'coparenting-positive' ||
+      (e.category === 'parenting' && e.entry_subtype === 'positive-parenting');
+    if (isPositive) posWeight += (e.severity || 4);
+    else negWeight += (6 - (e.severity || 2));
+  });
+  var totalWeight = posWeight + negWeight;
+  var climateRatio = totalWeight > 0 ? posWeight / totalWeight : null;
+  var climateInfo = climateRatio === null ? { label: '—', color: 'var(--text3)' }
+    : climateRatio >= 0.75 ? { label: 'Warm', color: 'var(--sage)' }
+    : climateRatio >= 0.55 ? { label: 'Cooperative', color: '#8ab08a' }
+    : climateRatio >= 0.4  ? { label: 'Neutral', color: 'var(--amber)' }
+    : climateRatio >= 0.2  ? { label: 'Strained', color: '#ce7b8d' }
+    : { label: 'Tense', color: 'var(--accent)' };
+
+  // ── Card 4: Top Habit Logged ──────────────────────────────────────────────
+  var patCounts = {};
+  entries.forEach(function (e) {
+    (e.pattern_tags || []).forEach(function (slug) { patCounts[slug] = (patCounts[slug] || 0) + 1; });
+  });
+  var topPatEntry = Object.entries(patCounts).sort(function (a, b) { return b[1] - a[1]; })[0];
+  var topPatLabel = '—', topPatSub = '';
+  if (topPatEntry) {
+    var topPat = allPatterns.find(function (p) { return p.slug === topPatEntry[0]; });
+    topPatLabel = topPat ? topPat.label : topPatEntry[0];
+    topPatSub = topPatEntry[1] + '× logged';
+  }
+
+  var habitsHtml = '<div class="ana-stat-card">' +
+    '<div class="ana-stat-val" style="font-size:18px;line-height:1.4;">' +
+      '<span style="color:var(--sage);font-weight:600;">' + posLogged + ' Positive</span><br>' +
+      '<span style="color:var(--accent);font-weight:600;">' + negLogged + ' Concerning</span>' +
+    '</div>' +
+    '<div class="ana-stat-lbl">Habits Logged</div>' +
+    '</div>';
+
+  el.innerHTML = [
+    { label: 'Total Entries', val: total, sub: '' },
+    null, // habits card rendered separately above
+    { label: 'Communication Climate', val: climateInfo.label, valColor: climateInfo.color, sub: totalWeight > 0 ? 'based on ' + climateEntries.length + ' entries' : 'no communication data' },
+    { label: 'Top Habit Logged', val: topPatLabel, sub: topPatSub, valSmall: true },
+  ].map(function (s, i) {
+    if (i === 1) return habitsHtml;
+    var valStyle = s.valColor ? 'color:' + s.valColor + ';' : '';
+    if (s.valSmall) valStyle += 'font-size:15px;line-height:1.25;word-break:break-word;';
+    return '<div class="ana-stat-card">' +
+      '<div class="ana-stat-val" style="' + valStyle + '">' + s.val + '</div>' +
+      '<div class="ana-stat-lbl">' + s.label + '</div>' +
+      (s.sub ? '<div class="ana-stat-sub">' + s.sub + '</div>' : '') +
+      '</div>';
+  }).join('');
+}
+
+// ── FREQUENCY CHART ───────────────────────────────────────────────────────────
+function renderAnaFreqChart(entries, opEntries) {
+  anaDestroyChart('freq');
+  var periods = {};
+
+  var CAT_COLORS = {
+    incident: { bg: 'rgba(154,80,112,.65)', bd: '#9a5070' },
+    parenting: { bg: 'rgba(202,143,165,.65)', bd: '#ca8fa5' },
+    health: { bg: 'rgba(72,112,168,.65)', bd: '#4870a8' },
+    memories: { bg: 'rgba(103,133,102,.65)', bd: '#678566' },
+    reflection: { bg: 'rgba(176,120,48,.65)', bd: '#b07830' },
+    entry: { bg: 'rgba(202,143,165,.65)', bd: '#ca8fa5' },
+  };
+
+  function addEntry(e, key) {
+    var p = anaTimePeriod(e.entry_date, anaGran);
+    if (!periods[p]) periods[p] = {};
+    periods[p][key] = (periods[p][key] || 0) + 1;
+  }
+
+  if (anaView === 'all') {
+    entries.forEach(function (e) {
+      var key = e.category === 'health' ? 'health'
+        : e.category === 'memories' ? 'memories'
+        : e.entry_type === 'reflection' ? 'reflection'
+        : 'incident';
+      addEntry(e, key);
+    });
+    opEntries.forEach(function (e) { addEntry(e, 'parenting'); });
+  } else {
+    entries.forEach(function (e) { addEntry(e, 'entry'); });
+    opEntries.forEach(function (e) { addEntry(e, 'entry'); });
+  }
+
+  var sortedPeriods = Object.keys(periods).sort();
+  anaShowOrEmpty('ana-freq-wrap', 'ana-freq-empty', sortedPeriods.length > 0);
+  if (!sortedPeriods.length) return;
+
+  var datasets;
+  if (anaView === 'all') {
+    var sourceKeys = ['incident', 'parenting', 'health', 'memories', 'reflection'];
+    var sourceLabels = { incident: 'Co-Parenting Log', parenting: 'Our Parenting', health: 'Health', memories: 'Memories', reflection: 'Reflections' };
+    datasets = sourceKeys
+      .filter(function (k) { return sortedPeriods.some(function (p) { return periods[p][k]; }); })
+      .map(function (k) {
+        return {
+          label: sourceLabels[k],
+          data: sortedPeriods.map(function (p) { return periods[p][k] || 0; }),
+          backgroundColor: CAT_COLORS[k].bg,
+          borderColor: CAT_COLORS[k].bd,
+          borderWidth: 1,
+        };
+      });
+  } else {
+    var c = CAT_COLORS[anaView] || CAT_COLORS.entry;
+    datasets = [{ label: 'Entries', data: sortedPeriods.map(function (p) { return periods[p].entry || 0; }), backgroundColor: c.bg, borderColor: c.bd, borderWidth: 1 }];
+  }
+
+  var ctx = document.getElementById('ana-freq-canvas').getContext('2d');
+  anaCharts.freq = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: sortedPeriods.map(anaFormatPeriod), datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: anaView === 'all', labels: { font: { family: 'Jost' }, boxWidth: 12 } } },
+      scales: {
+        x: { stacked: anaView === 'all', ticks: { font: { family: 'Jost', size: 11 } } },
+        y: { stacked: anaView === 'all', beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Jost', size: 11 } } },
+      },
+    },
+  });
+}
+
+// ── PATTERN TAG BARS ──────────────────────────────────────────────────────────
+function renderAnaPatternBars(entries) {
+  var el = document.getElementById('ana-pattern-bars');
+  var emptyEl = document.getElementById('ana-pattern-empty');
+  if (!el) return;
+  var counts = {};
+  entries.forEach(function (e) {
+    (e.pattern_tags || []).forEach(function (slug) { counts[slug] = (counts[slug] || 0) + 1; });
+  });
+  var sorted = Object.entries(counts).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 12);
+  var hasData = sorted.length > 0;
+  el.style.display = hasData ? '' : 'none';
+  if (emptyEl) emptyEl.style.display = hasData ? 'none' : '';
+  if (!hasData) return;
+  var max = sorted[0][1] || 1;
+  el.innerHTML = sorted.map(function (kv) {
+    var p = allPatterns.find(function (x) { return x.slug === kv[0]; });
+    var label = p ? p.label : kv[0];
+    var cat = p ? p.category : 'mary';
+    var fillColor = cat === 'mary' ? 'var(--mauve)' : cat === 'us' ? 'var(--amber)' : 'var(--sage)';
+    return '<div class="bar-row">' +
+      '<div class="bar-label"><span class="ptag ptag-' + cat + '" style="font-size:10px;padding:2px 6px;">' + label + '</span></div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + Math.round(kv[1] / max * 100) + '%;background:' + fillColor + ';"></div></div>' +
+      '<div class="bar-count">' + kv[1] + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+// ── PATTERN TIMELINE ──────────────────────────────────────────────────────────
+var PAT_LINE_COLORS = ['#ce7b8d','#9a5070','#678566','#b07830','#4870a8','#8ab08a','#c0a8b0','#7a6080','#d4a040','#5890a0'];
+
+function renderAnaPatternTimeline(entries) {
+  anaDestroyChart('sev');
+
+  // Count all pattern slugs across entries
+  var patCounts = {};
+  entries.forEach(function (e) {
+    (e.pattern_tags || []).forEach(function (slug) { patCounts[slug] = (patCounts[slug] || 0) + 1; });
+  });
+  var allSlugs = Object.keys(patCounts).sort(function (a, b) { return patCounts[b] - patCounts[a]; });
+
+  // Keep only slugs still present in data; default to top 5
+  anaPatternTimePats = anaPatternTimePats.filter(function (s) { return allSlugs.includes(s); });
+  var activeSlugs = anaPatternTimePats.length > 0 ? anaPatternTimePats : allSlugs.slice(0, 5);
+
+  // Render filter pills (top 10 patterns)
+  var pillEl = document.getElementById('ana-pat-timeline-pills');
+  if (pillEl) {
+    pillEl.innerHTML = allSlugs.slice(0, 10).map(function (slug) {
+      var pat = allPatterns.find(function (p) { return p.slug === slug; });
+      var label = pat ? pat.label : slug;
+      var isActive = activeSlugs.includes(slug);
+      return '<button class="fpill' + (isActive ? ' active' : '') + '" onclick="togglePatTimeline(\'' + slug + '\')" style="margin:2px 3px 2px 0;font-size:11px;">' + label + '</button>';
+    }).join('');
+  }
+
+  // Build period data for active slugs
+  var allPeriods = new Set();
+  var patData = {};
+  activeSlugs.forEach(function (slug) { patData[slug] = {}; });
+
+  entries.forEach(function (e) {
+    var period = anaTimePeriod(e.entry_date, anaGran);
+    allPeriods.add(period);
+    (e.pattern_tags || []).forEach(function (slug) {
+      if (patData[slug]) patData[slug][period] = (patData[slug][period] || 0) + 1;
+    });
+  });
+
+  var sortedPeriods = Array.from(allPeriods).sort();
+  var hasData = sortedPeriods.length > 0 && activeSlugs.length > 0;
+  anaShowOrEmpty('ana-sev-wrap', 'ana-sev-empty', hasData);
+  if (!hasData) return;
+
+  var datasets = activeSlugs.map(function (slug, i) {
+    var pat = allPatterns.find(function (p) { return p.slug === slug; });
+    var color = PAT_LINE_COLORS[i % PAT_LINE_COLORS.length];
+    return {
+      label: pat ? pat.label : slug,
+      data: sortedPeriods.map(function (p) { return patData[slug][p] || 0; }),
+      borderColor: color,
+      backgroundColor: color + '22',
+      fill: false,
+      tension: 0.3,
+      pointRadius: 3,
+      pointBackgroundColor: color,
+    };
+  });
+
+  var ctx = document.getElementById('ana-sev-canvas').getContext('2d');
+  anaCharts.sev = new Chart(ctx, {
+    type: 'line',
+    data: { labels: sortedPeriods.map(anaFormatPeriod), datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'bottom', labels: { font: { family: 'Jost', size: 10 }, boxWidth: 10, padding: 6 } },
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Jost', size: 11 } } },
+        x: { ticks: { font: { family: 'Jost', size: 11 } } },
+      },
+    },
+  });
+}
+
+function togglePatTimeline(slug) {
+  // If nothing explicitly selected, start with current auto-top-5 as the base
+  if (anaPatternTimePats.length === 0) {
+    var d = getAnaFiltered();
+    var counts = {};
+    d.entries.forEach(function (e) {
+      (e.pattern_tags || []).forEach(function (s) { counts[s] = (counts[s] || 0) + 1; });
+    });
+    anaPatternTimePats = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).slice(0, 5);
+  }
+  if (anaPatternTimePats.includes(slug)) {
+    anaPatternTimePats = anaPatternTimePats.filter(function (s) { return s !== slug; });
+  } else {
+    anaPatternTimePats.push(slug);
+  }
+  var d = getAnaFiltered();
+  renderAnaPatternTimeline(d.entries);
+}
+
+// ── OUTCOME DONUT ─────────────────────────────────────────────────────────────
+function renderAnaOutcomeChart(opEntries) {
+  anaDestroyChart('outcome');
+  var counts = {};
+  LIST_OUTCOMES.forEach(function (o) { counts[o] = 0; });
+  opEntries.forEach(function (e) {
+    var o = e.outcome || 'N/A';
+    if (counts[o] !== undefined) counts[o]++;
+    else counts['N/A']++;
+  });
+  var hasData = opEntries.length > 0;
+  anaShowOrEmpty('ana-outcome-wrap', 'ana-outcome-empty', hasData);
+  if (!hasData) return;
+  var OUTCOME_COLORS = {
+    'Acknowledged No Response': '#b07830',
+    'Ignored': '#9a5070',
+    'Accepted': '#678566',
+    'Declined': '#ce7b8d',
+    'N/A': '#c0a8b0',
+  };
+  var ctx = document.getElementById('ana-outcome-canvas').getContext('2d');
+  anaCharts.outcome = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: LIST_OUTCOMES,
+      datasets: [{
+        data: LIST_OUTCOMES.map(function (o) { return counts[o]; }),
+        backgroundColor: LIST_OUTCOMES.map(function (o) { return OUTCOME_COLORS[o] || '#ccc'; }),
+        borderWidth: 2,
+        borderColor: '#fff',
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '58%',
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'Jost', size: 11 }, boxWidth: 12, padding: 8 } },
+      },
+    },
+  });
+}
+
+// ── TOP 5 PATTERNS ────────────────────────────────────────────────────────────
+function renderAnaTopPatterns(entries) {
+  var el = document.getElementById('ana-top-patterns-list');
+  var emptyEl = document.getElementById('ana-top-patterns-empty');
+  if (!el) return;
+  var counts = {};
+  entries.forEach(function (e) {
+    (e.pattern_tags || []).forEach(function (slug) { counts[slug] = (counts[slug] || 0) + 1; });
+  });
+  var sorted = Object.entries(counts).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 5);
+  var hasData = sorted.length > 0;
+  el.style.display = hasData ? '' : 'none';
+  if (emptyEl) emptyEl.style.display = hasData ? 'none' : '';
+  if (!hasData) return;
+  el.innerHTML = sorted.map(function (kv, idx) {
+    var p = allPatterns.find(function (x) { return x.slug === kv[0]; });
+    var label = p ? p.label : kv[0];
+    var cat = p ? p.category : 'mary';
+    return '<div class="ana-top-item">' +
+      '<div class="ana-top-rank">' + (idx + 1) + '</div>' +
+      '<div class="ana-top-body"><span class="ptag ptag-' + cat + '" style="font-size:11px;">' + label + '</span></div>' +
+      '<div class="ana-top-count">' + kv[1] + '×</div>' +
+      '</div>';
+  }).join('');
+}
+
+// ── ACTIONS VS INCIDENTS CHART ────────────────────────────────────────────────
+function renderAnaRatioChart(entries, opEntries) {
+  anaDestroyChart('ratio');
+  var incidents = entries.filter(function (e) { return e.entry_type === 'capture' && e.severity && e.severity <= 2; });
+  var iByPeriod = {};
+  var aByPeriod = {};
+  incidents.forEach(function (e) {
+    var p = anaTimePeriod(e.entry_date, 'month');
+    iByPeriod[p] = (iByPeriod[p] || 0) + 1;
+  });
+  opEntries.forEach(function (e) {
+    var p = anaTimePeriod(e.entry_date, 'month');
+    aByPeriod[p] = (aByPeriod[p] || 0) + 1;
+  });
+  var allPeriods = Array.from(new Set(Object.keys(iByPeriod).concat(Object.keys(aByPeriod)))).sort();
+  var hasData = allPeriods.length > 0;
+  anaShowOrEmpty('ana-ratio-wrap', 'ana-ratio-empty', hasData);
+  if (!hasData) return;
+  var ctx = document.getElementById('ana-ratio-canvas').getContext('2d');
+  anaCharts.ratio = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: allPeriods.map(anaFormatPeriod),
+      datasets: [
+        {
+          label: 'Our Actions',
+          data: allPeriods.map(function (p) { return aByPeriod[p] || 0; }),
+          backgroundColor: 'rgba(103,133,102,.7)', borderColor: '#678566', borderWidth: 1,
+        },
+        {
+          label: 'Concerning Incidents',
+          data: allPeriods.map(function (p) { return iByPeriod[p] || 0; }),
+          backgroundColor: 'rgba(154,80,112,.7)', borderColor: '#9a5070', borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { font: { family: 'Jost', size: 11 }, boxWidth: 12, padding: 8 } } },
+      scales: {
+        x: { ticks: { font: { family: 'Jost', size: 11 } } },
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Jost', size: 11 } } },
+      },
+    },
+  });
+}
+
+// ── ANALYTICS TABLE VIEW ──────────────────────────────────────────────────────
+function renderAnaTable() {
+  var d = getAnaFiltered();
+  var search = ((document.getElementById('ana-table-search') || {}).value || '').toLowerCase();
+  var sortVal = (document.getElementById('ana-table-sort') || {}).value || 'date-desc';
+
+  var rows = d.entries.map(function (e) {
+    return {
+      date: e.entry_date,
+      log: e.category_name || (e.entry_type === 'reflection' ? 'Reflection' : e.category || 'Entry'),
+      category: e.category || '',
+      type: e.type_name || e.type || (e.entry_type === 'reflection' ? 'Daily Reflection' : ''),
+      people: ((e.people || []).length ? e.people.join(', ') : '') || (e.kid || ''),
+      severity: e.severity || null,
+      logger: e.logger || '',
+      facts: e.facts || '',
+    };
+  }).concat(d.opEntries.map(function (e) {
+    var action = OUR_PARENTING_ACTIONS.find(function (a) { return a.id === e.action_type; });
+    return {
+      date: e.entry_date,
+      log: 'Our Parenting',
+      category: 'our-parenting',
+      type: action ? action.label : (e.action_type || ''),
+      people: (e.kids || []).join(', '),
+      severity: null,
+      logger: e.logger || '',
+      facts: e.notes || '',
+    };
+  }));
+
+  if (search) {
+    rows = rows.filter(function (r) {
+      return [r.log, r.type, r.people, r.facts, r.logger].join(' ').toLowerCase().indexOf(search) !== -1;
+    });
+  }
+
+  rows.sort(function (a, b) {
+    if (sortVal === 'sev-desc') return (b.severity || 0) - (a.severity || 0);
+    if (sortVal === 'sev-asc') return (a.severity || 0) - (b.severity || 0);
+    var dir = sortVal === 'date-asc' ? 1 : -1;
+    return dir * (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  });
+
+  var tbody = document.getElementById('ana-table-body');
+  var empty = document.getElementById('ana-table-empty');
+  if (!tbody) return;
+
+  if (!rows.length) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  var CAT_BADGE = {
+    kids: 'b-kids', parenting: 'b-parenting', coparenting: 'b-coparenting',
+    'coparenting-positive': 'b-memories', memories: 'b-memories', health: 'b-health',
+    'our-parenting': 'b-parenting', reflection: 'b-type',
+  };
+
+  tbody.innerHTML = rows.map(function (r) {
+    var d = new Date(r.date);
+    var ds = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    var catCls = CAT_BADGE[r.category] || 'b-type';
+    var sevStr = r.severity
+      ? '<span class="bdg b-type" style="font-size:10px;">' + r.severity + '/5</span>'
+      : '<span style="color:var(--text3);font-size:12px;">—</span>';
+    return '<tr>' +
+      '<td style="white-space:nowrap;">' + ds + '</td>' +
+      '<td><span class="bdg ' + catCls + '" style="font-size:10px;">' + r.log + '</span></td>' +
+      '<td style="font-size:12px;color:var(--text2);">' + (r.type || '—') + '</td>' +
+      '<td style="font-size:12px;color:var(--text2);">' + (r.people || '—') + '</td>' +
+      '<td>' + sevStr + '</td>' +
+      '<td><span class="bdg ' + (r.logger === 'Dave' ? 'b-d' : 'b-h') + '" style="font-size:10px;">' + r.logger + '</span></td>' +
+      '</tr>';
+  }).join('');
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────

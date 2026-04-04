@@ -153,6 +153,18 @@ var KIDS = ['Landon', 'Luke', 'Leo'];
 // ── MARY KIDS TREATMENT OPTIONS ───────────────────────────────────────────────
 var MARY_TREATMENT = ['Warm', 'Neutral', 'Dismissive', 'Cold', 'Not present'];
 
+// ── MARY MOOD LOG ─────────────────────────────────────────────────────────────
+var MARY_MOODS = [
+  { label: 'Warm',     polarity: 'positive' },
+  { label: 'Friendly', polarity: 'positive' },
+  { label: 'Neutral',  polarity: 'neutral'  },
+  { label: 'Tense',    polarity: 'negative' },
+  { label: 'Cold',     polarity: 'negative' },
+  { label: 'Hostile',  polarity: 'negative' },
+  { label: 'Erratic',  polarity: 'negative' },
+];
+var MARY_FORMATS = ['In person', 'Phone call', 'Text', 'Email', 'Pickup/dropoff'];
+
 // ── HEALTH & MEDICAL ──────────────────────────────────────────────────────────
 var HEALTH_SYMPTOMS = [
   'Fever', 'Cough', 'Runny nose', 'Sore throat', 'Headache',

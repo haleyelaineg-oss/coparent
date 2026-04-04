@@ -51,9 +51,11 @@
 .ptag{font-size:11px;padding:3px 8px;border-radius:6px;font-weight:500;}
 .ptag-mary{background:var(--mauve-l);color:var(--mauve);}
 .ptag-boys{background:var(--sage-l);color:var(--sage);}
+.ptag-us{background:var(--amber-l,#fef3cd);color:var(--amber);}
 .pchip{font-size:12px;}
 .pchip-mary.on{background:var(--mauve) !important;color:#fff !important;border-color:var(--mauve) !important;}
 .pchip-boys.on{background:var(--sage) !important;color:#fff !important;border-color:var(--sage) !important;}
+.pchip-us.on{background:var(--amber) !important;color:#fff !important;border-color:var(--amber) !important;}
 .pt-group-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:6px;}
 /* daily reflection */
 .ref-session{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:10px;}
@@ -93,6 +95,31 @@
 .mh-body{flex:1;}
 .mh-name{font-size:14px;font-weight:500;color:var(--text);}
 .mh-kids{font-size:12px;color:var(--text3);margin-top:2px;}
+/* data analysis */
+.ana-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem;}
+.ana-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem 1rem;box-shadow:var(--shadow);text-align:center;}
+.ana-stat-val{font-size:28px;font-weight:600;color:var(--accent-d);line-height:1.1;margin-bottom:5px;}
+.ana-stat-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);}
+.ana-stat-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+.ana-top-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.ana-top-item:last-child{border-bottom:none;}
+.ana-top-rank{font-size:15px;font-weight:700;color:var(--text3);width:22px;text-align:center;flex-shrink:0;}
+.ana-top-body{flex:1;min-width:0;}
+.ana-top-count{font-size:13px;font-weight:600;color:var(--text2);flex-shrink:0;}
+.ana-table{width:100%;border-collapse:collapse;}
+.ana-table th{padding:9px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);border-bottom:2px solid var(--border);background:var(--surface2);white-space:nowrap;}
+.ana-table td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;color:var(--text);}
+.ana-table tr:last-child td{border-bottom:none;}
+.ana-table tbody tr:hover td{background:var(--surface2);}
+.ana-mode-row{display:flex;gap:8px;align-items:center;margin-bottom:1.25rem;}
+@media(max-width:600px){.ana-stat-grid{grid-template-columns:repeat(2,1fr);}}
+/* ── MOOD LOG MODAL ────────────────────────────────────────────────────────── */
+.ml-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center;padding:1rem;}
+.ml-overlay.open{display:flex;}
+.ml-modal{background:var(--surface);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);width:min(480px,100%);max-height:90vh;overflow-y:auto;padding:1.5rem;}
+.ml-mood-chip.positive.on{background:var(--sage)!important;color:#fff!important;border-color:var(--sage)!important;}
+.ml-mood-chip.neutral.on{background:var(--amber)!important;color:#fff!important;border-color:var(--amber)!important;}
+.ml-mood-chip.negative.on{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important;}
 </style>
 </head>
 <body>
@@ -144,8 +171,8 @@
     <button class="nb active" onclick="nav('dashboard',this)"><span class="ni">⌂</span> Dashboard</button>
   </div>
   <div class="nav-sec">
-    <div class="nav-lbl">Daily</div>
-    <button class="nb" onclick="nav('reflection',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/></svg></span> Daily Reflection</button>
+    <div class="nav-lbl">Quick</div>
+    <button class="nb" onclick="openMoodLog()"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z"/></svg></span> Mary's Mood Log</button>
   </div>
   <div class="nav-sec">
     <div class="nav-lbl">Capture</div>
@@ -156,6 +183,7 @@
   <div class="nav-sec">
     <div class="nav-lbl">Review</div>
     <button class="nb" onclick="nav('viewlog',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg></span> Review Entries <span class="nc" id="nav-count">0</span></button>
+    <button class="nb" onclick="nav('analytics',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg></span> Data Analysis</button>
     <button class="nb" onclick="nav('export',this)"><span class="ni"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg></span> Export</button>
   </div>
   <div class="nav-sec">
@@ -173,13 +201,10 @@
   <div class="dash-greeting" id="dash-greeting">Good morning!</div>
   <div class="dash-date" id="dash-date"></div>
   <div class="quick-actions">
-    <button class="qa-btn primary" onclick="nav('reflection',null)">
-      <div class="qa-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;">
-  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-</svg>
-</div>
-      <div class="qa-label">Daily Reflection</div>
-      <div class="qa-sub">Today's guided check-in</div>
+    <button class="qa-btn primary" onclick="openMoodLog()">
+      <div class="qa-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z"/></svg></div>
+      <div class="qa-label">Mary's Mood Log</div>
+      <div class="qa-sub">Quick interaction capture</div>
     </button>
     <button class="qa-btn" onclick="nav('capture',null)">
       <div class="qa-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;">
@@ -188,6 +213,11 @@
 </div>
       <div class="qa-label">Capture</div>
       <div class="qa-sub">Log an observation</div>
+    </button>
+    <button class="qa-btn" onclick="nav('health',null)">
+      <div class="qa-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-file-medical" viewBox="0 0 16 16"><path d="M8.5 4.5a.5.5 0 0 0-1 0v.634l-.549-.317a.5.5 0 1 0-.5.866L7 6l-.549.317a.5.5 0 1 0 .5.866l.549-.317V7.5a.5.5 0 1 0 1 0v-.634l.549.317a.5.5 0 1 0 .5-.866L9 6l.549-.317a.5.5 0 1 0-.5-.866l-.549.317zM5.5 9a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1z"/><path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1"/></svg></div>
+      <div class="qa-label">Health Log</div>
+      <div class="qa-sub">Track illness or injury</div>
     </button>
     <button class="qa-btn" onclick="nav('viewlog',null)">
       <div class="qa-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;">
@@ -205,11 +235,10 @@
       <div class="qa-label">Memories</div>
       <div class="qa-sub">Capture a good moment</div>
     </button>
-
     <button class="qa-btn" onclick="nav('export',null)">
       <div class="qa-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg></div>
       <div class="qa-label">Export</div>
-      <div class="qa-sub">Download Data</div>
+      <div class="qa-sub">Download data</div>
     </button>
   </div>
   <div class="card">
@@ -430,6 +459,8 @@
     <div class="ct">Pattern Tags <span style="font-size:11px;color:var(--text3);font-weight:400;">— optional, tag recurring patterns</span></div>
     <div class="pt-group-lbl">Mary's Behavior</div>
     <div class="kids-row" id="cap-patterns-mary"></div>
+    <div class="pt-group-lbl" style="margin-top:10px;">Our Patterns</div>
+    <div class="kids-row" id="cap-patterns-us"></div>
     <div class="pt-group-lbl" style="margin-top:10px;">Boys' Patterns</div>
     <div class="kids-row" id="cap-patterns-boys"></div>
   </div>
@@ -751,7 +782,8 @@
     <div class="fg1" style="margin-bottom:12px;">
       <label class="fgl">Category</label>
       <select id="new-pattern-category">
-        <option value="mary">Mary's Behavior</option>
+        <option value="mary">Mary's Patterns</option>
+        <option value="us">Our Patterns</option>
         <option value="boys">Boys' Patterns</option>
       </select>
     </div>
@@ -860,10 +892,198 @@
   </div>
 </div>
 
+<!-- DATA ANALYSIS -->
+<div class="pg" id="pg-analytics">
+  <h1 class="pg-title">Data Analysis</h1>
+  <p class="pg-sub">Visual patterns and analytics across all logs.</p>
+
+  <!-- View tabs -->
+  <div class="view-tabs" style="overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;" id="ana-view-tabs">
+    <button class="vtab active" onclick="setAnaView('all',this)">All Data</button>
+    <button class="vtab" onclick="setAnaView('incident',this)">Co-Parenting Log</button>
+    <button class="vtab" onclick="setAnaView('parenting',this)">Our Parenting</button>
+    <button class="vtab" onclick="setAnaView('health',this)">Health & Medical</button>
+    <button class="vtab" onclick="setAnaView('memories',this)">Memories</button>
+  </div>
+
+  <!-- Filters -->
+  <div class="card">
+    <div class="ct">Filters</div>
+    <div class="fg" style="flex-wrap:wrap;">
+      <div class="fg1">
+        <label class="fgl">From</label>
+        <input type="date" id="ana-from" onchange="renderAnalytics()"/>
+      </div>
+      <div class="fg1">
+        <label class="fgl">To</label>
+        <input type="date" id="ana-to" onchange="renderAnalytics()"/>
+      </div>
+      <div class="fg1">
+        <label class="fgl">Child</label>
+        <select id="ana-kid" onchange="renderAnalytics()">
+          <option value="">All children</option>
+          <option>Landon</option>
+          <option>Luke</option>
+          <option>Leo</option>
+        </select>
+      </div>
+      <div class="fg1">
+        <label class="fgl">Logged by</label>
+        <select id="ana-logger" onchange="renderAnalytics()">
+          <option value="">Both</option>
+          <option>Haley</option>
+          <option>Dave</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mode toggle -->
+  <div class="ana-mode-row">
+    <button class="btn btn-p" id="ana-btn-charts" onclick="setAnaMode('charts')">Charts</button>
+    <button class="btn" id="ana-btn-table" onclick="setAnaMode('table')">Table View</button>
+  </div>
+
+  <!-- CHARTS VIEW -->
+  <div id="ana-charts-view">
+
+    <!-- Stat cards -->
+    <div class="ana-stat-grid" id="ana-stat-grid"></div>
+
+    <!-- Frequency chart -->
+    <div class="card" style="margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px;">
+        <div class="ct" style="margin-bottom:0;">Entry Frequency Over Time</div>
+        <div style="display:flex;gap:6px;">
+          <button class="fpill active" id="ana-gran-week" onclick="setAnaGran('week')">Weekly</button>
+          <button class="fpill" id="ana-gran-month" onclick="setAnaGran('month')">Monthly</button>
+        </div>
+      </div>
+      <div id="ana-freq-wrap" style="position:relative;height:220px;">
+        <canvas id="ana-freq-canvas"></canvas>
+      </div>
+      <div id="ana-freq-empty" class="empty" style="display:none;">No entries in selected range.</div>
+    </div>
+
+    <!-- Pattern breakdown + Severity trend -->
+    <div class="trend-grid" style="margin-bottom:0;">
+      <div class="trend-box trend-box-wide" id="ana-patterns-box">
+        <div class="trend-title">Pattern Tag Breakdown</div>
+        <div id="ana-pattern-bars"></div>
+        <div id="ana-pattern-empty" class="empty" style="display:none;padding:.5rem 0;">No pattern tags in range.</div>
+      </div>
+      <div class="trend-box trend-box-wide" id="ana-severity-box">
+        <div class="trend-title">Pattern Timeline</div>
+        <div id="ana-pat-timeline-pills" style="display:flex;flex-wrap:wrap;margin-bottom:.5rem;"></div>
+        <div id="ana-sev-wrap" style="position:relative;height:180px;">
+          <canvas id="ana-sev-canvas"></canvas>
+        </div>
+        <div id="ana-sev-empty" class="empty" style="display:none;padding:.5rem 0;">No pattern data in range.</div>
+      </div>
+    </div>
+
+    <!-- Top patterns -->
+    <div class="trend-box trend-box-wide" id="ana-top-patterns-box" style="margin-top:12px;">
+      <div class="trend-title">Top 5 Patterns</div>
+      <div id="ana-top-patterns-list"></div>
+      <div id="ana-top-patterns-empty" class="empty" style="display:none;padding:.5rem 0;">No pattern data in range.</div>
+    </div>
+
+    <!-- Actions vs Incidents -->
+    <div class="trend-box trend-box-wide" id="ana-ratio-box" style="margin:12px 0 0;">
+      <div class="trend-title">Positive Actions vs. Concerning Incidents — Monthly</div>
+      <div id="ana-ratio-wrap" style="position:relative;height:170px;">
+        <canvas id="ana-ratio-canvas"></canvas>
+      </div>
+      <div id="ana-ratio-empty" class="empty" style="display:none;padding:.5rem 0;">No data to compare.</div>
+    </div>
+
+  </div><!-- end ana-charts-view -->
+
+  <!-- TABLE VIEW -->
+  <div id="ana-table-view" style="display:none;">
+    <div style="display:flex;gap:8px;margin-bottom:.75rem;flex-wrap:wrap;">
+      <input type="search" id="ana-table-search" placeholder="Search entries…" oninput="renderAnaTable()" style="flex:1;min-width:180px;"/>
+      <select id="ana-table-sort" onchange="renderAnaTable()">
+        <option value="date-desc">Newest first</option>
+        <option value="date-asc">Oldest first</option>
+        <option value="sev-desc">Severity: high to low</option>
+        <option value="sev-asc">Severity: low to high</option>
+      </select>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="overflow-x:auto;">
+        <table class="ana-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Log</th>
+              <th>Type</th>
+              <th>People</th>
+              <th>Sev</th>
+              <th>By</th>
+            </tr>
+          </thead>
+          <tbody id="ana-table-body"></tbody>
+        </table>
+      </div>
+      <div id="ana-table-empty" class="empty" style="display:none;padding:1.5rem;text-align:center;">No entries match.</div>
+    </div>
+  </div>
+
+</div><!-- end pg-analytics -->
+
+
+<!-- MARY'S MOOD LOG MODAL -->
+<div class="ml-overlay" id="mood-log-overlay" onclick="closeMoodLog(event)">
+  <div class="ml-modal" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+      <div class="ct" style="margin:0;">Mary's Mood Log</div>
+      <button onclick="closeMoodLogBtn()" style="background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:var(--text3);padding:0 2px;">✕</button>
+    </div>
+
+    <div class="fg1" style="margin-bottom:1rem;">
+      <label class="fgl">Date</label>
+      <input type="date" id="ml-date"/>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+      <div class="fgl">Mood</div>
+      <div class="kids-row" style="flex-wrap:wrap;" id="ml-mood-chips"></div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+      <div class="fgl">Format(s) <span style="font-size:11px;font-weight:400;color:var(--text3);">— select all that apply</span></div>
+      <div class="kids-row" style="flex-wrap:wrap;" id="ml-format-chips"></div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+      <div class="fgl">Kids present?</div>
+      <div class="kids-row">
+        <div class="kchip" id="ml-kids-yes" onclick="setMoodLogKids(true)">Yes</div>
+        <div class="kchip" id="ml-kids-no" onclick="setMoodLogKids(false)">No</div>
+      </div>
+    </div>
+
+    <div class="fg1" style="margin-bottom:1.25rem;">
+      <label class="fgl">Notes <span style="font-size:11px;font-weight:400;color:var(--text3);">— optional</span></label>
+      <textarea id="ml-notes" rows="3" placeholder="Brief context or what happened…" style="resize:vertical;"></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-p" onclick="saveMoodLog()">Save Quick Capture</button>
+      <button class="btn" onclick="captureLater()">Full Capture →</button>
+    </div>
+    <div class="toast t-ok" id="ml-ok" style="margin-top:.5rem;"></div>
+    <div class="toast t-err" id="ml-err" style="margin-top:.5rem;"></div>
+  </div>
+</div>
+
 </main>
 </div>
 </div><!-- end screen-app -->
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="script.js"></script>
