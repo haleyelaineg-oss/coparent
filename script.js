@@ -1822,6 +1822,10 @@ function genExport() {
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function setNow(id) {
   var n = new Date();
   var el = document.getElementById(id);
@@ -1839,10 +1843,13 @@ function showToast(prefix, type, msg) {
 
 // ── CHORES ────────────────────────────────────────────────────────────────────
 var allChores = [];
-var choreAssignments = {}; // { "Landon": Set of chore ids, "Luke": Set, "Leo": Set }
-var choreAssignKid = KIDS[0] || 'Landon';
-var choreEditId = null; // chore id being edited in form, null = new
-var choreEditTraining = {}; // { kidName: statusId } local form state
+var choreAssignments = {}; // { kid: Set<choreId> } — synced to Supabase daily
+var allTemplates = [];
+var choreFilterMastered = new Set(); // kid names whose mastered chores to hide
+var choreViewMode = 'all'; // 'all' | 'bykid'
+var choreViewKid = '';
+var choreEditId = null;
+var choreEditTraining = {};
 
 async function loadChores() {
   var { data, error } = await sb.from('chores').select('*').eq('active', true).order('room').order('name');
@@ -2003,65 +2010,180 @@ async function confirmDeleteChore() {
 }
 
 // ── CHORE ASSIGNMENT ──────────────────────────────────────────────────────────
-function initChoresPage() {
-  // Init assignments if not yet set
-  KIDS.forEach(function (kid) {
-    if (!choreAssignments[kid]) choreAssignments[kid] = new Set();
-  });
-  if (!KIDS.includes(choreAssignKid)) choreAssignKid = KIDS[0];
-
-  // If chores haven't loaded yet, load them first
-  if (!allChores.length) {
-    loadChores().then(function () { renderKidTabs(); renderChoreAssign(); });
-  } else {
-    renderKidTabs();
-    renderChoreAssign();
+async function loadChoreAssignments() {
+  var today = new Date().toISOString().slice(0, 10);
+  KIDS.forEach(function (kid) { choreAssignments[kid] = new Set(); });
+  var { data, error } = await sb.from('chore_assignments').select('*').eq('assignment_date', today);
+  if (!error && data) {
+    data.forEach(function (row) {
+      if (choreAssignments[row.kid]) choreAssignments[row.kid].add(row.chore_id);
+    });
   }
 }
 
-function renderKidTabs() {
-  var el = document.getElementById('chore-kid-tabs');
-  el.innerHTML = KIDS.map(function (kid) {
-    var count = choreAssignments[kid] ? choreAssignments[kid].size : 0;
-    var active = kid === choreAssignKid ? ' active' : '';
-    return '<button class="kchip' + active + '" onclick="setChoreAssignKid(\'' + kid + '\')" style="font-size:13px;padding:6px 14px;">' +
-      esc(kid) + (count ? ' <span style="background:var(--accent);color:#fff;border-radius:100px;padding:1px 6px;font-size:11px;">' + count + '</span>' : '') +
-      '</button>';
-  }).join('');
+async function loadChoreTemplates() {
+  var { data, error } = await sb.from('chore_templates').select('*').order('name');
+  if (!error && data) allTemplates = data;
 }
 
-function setChoreAssignKid(kid) {
-  choreAssignKid = kid;
-  renderKidTabs();
+async function initChoresPage() {
+  KIDS.forEach(function (kid) { if (!choreAssignments[kid]) choreAssignments[kid] = new Set(); });
+  renderChoreFilters();
+  renderTemplateBar();
+  document.getElementById('chore-assign-body').innerHTML = '<div class="empty">Loading…</div>';
+  var tasks = [];
+  if (!allChores.length) tasks.push(loadChores());
+  tasks.push(loadChoreAssignments());
+  if (!allTemplates.length) tasks.push(loadChoreTemplates());
+  await Promise.all(tasks);
+  renderChoreFilters();
+  renderTemplateBar();
   renderChoreAssign();
 }
 
+function renderTemplateBar() {
+  var el = document.getElementById('chore-template-bar');
+  if (!el) return;
+  if (!allTemplates.length) {
+    el.innerHTML = '<span style="font-size:12px;color:var(--text3);">No saved templates yet</span>';
+    return;
+  }
+  var html = '<select id="chore-tmpl-select" style="font-size:13px;padding:5px 8px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);">';
+  html += '<option value="">Choose template…</option>';
+  allTemplates.forEach(function (t) {
+    html += '<option value="' + t.id + '">' + esc(t.name) + '</option>';
+  });
+  html += '</select>';
+  html += '<button class="btn" onclick="loadSelectedTemplate()" style="font-size:12px;padding:5px 12px;">Load</button>';
+  html += '<button class="btn" onclick="deleteSelectedTemplate()" style="font-size:12px;padding:5px 12px;color:var(--danger);">Delete</button>';
+  el.innerHTML = html;
+}
+
+function loadSelectedTemplate() {
+  var sel = document.getElementById('chore-tmpl-select');
+  if (sel && sel.value) loadTemplate(sel.value);
+}
+
+function deleteSelectedTemplate() {
+  var sel = document.getElementById('chore-tmpl-select');
+  if (!sel || !sel.value) return;
+  var tmpl = allTemplates.find(function (t) { return t.id === sel.value; });
+  if (!tmpl) return;
+  if (!confirm('Delete template "' + tmpl.name + '"?')) return;
+  deleteTemplate(sel.value);
+}
+
+async function saveAsTemplate() {
+  var anyAssigned = KIDS.some(function (kid) { return choreAssignments[kid] && choreAssignments[kid].size > 0; });
+  if (!anyAssigned) { alert('Assign some chores first before saving a template.'); return; }
+  var name = prompt('Template name (e.g. School Night, Full Day, Practice Night):');
+  if (!name || !name.trim()) return;
+  var assignments = {};
+  KIDS.forEach(function (kid) { assignments[kid] = Array.from(choreAssignments[kid] || new Set()); });
+  var { data, error } = await sb.from('chore_templates').insert({ name: name.trim(), assignments: assignments }).select();
+  if (error) { alert('Save failed: ' + error.message); return; }
+  if (data) allTemplates.push(data[0]);
+  allTemplates.sort(function (a, b) { return a.name.localeCompare(b.name); });
+  renderTemplateBar();
+}
+
+async function loadTemplate(id) {
+  var tmpl = allTemplates.find(function (t) { return t.id === id; });
+  if (!tmpl) return;
+  if (!confirm('Load "' + tmpl.name + '"? This will replace today\'s assignments.')) return;
+  var today = new Date().toISOString().slice(0, 10);
+  await sb.from('chore_assignments').delete().eq('assignment_date', today);
+  KIDS.forEach(function (kid) { choreAssignments[kid] = new Set(); });
+  var rows = [];
+  KIDS.forEach(function (kid) {
+    (tmpl.assignments[kid] || []).forEach(function (cid) {
+      if (allChores.find(function (c) { return c.id === cid; })) {
+        choreAssignments[kid].add(cid);
+        rows.push({ assignment_date: today, kid: kid, chore_id: cid });
+      }
+    });
+  });
+  if (rows.length) await sb.from('chore_assignments').insert(rows);
+  renderChoreAssign();
+  renderAssignmentOverview();
+}
+
+async function deleteTemplate(id) {
+  await sb.from('chore_templates').delete().eq('id', id);
+  allTemplates = allTemplates.filter(function (t) { return t.id !== id; });
+  renderTemplateBar();
+}
+
+function toggleChoreFilter(kid) {
+  if (choreFilterMastered.has(kid)) choreFilterMastered.delete(kid);
+  else choreFilterMastered.add(kid);
+  renderChoreFilters();
+  renderChoreAssign();
+}
+
+function renderChoreFilters() {
+  var el = document.getElementById('chore-filter-chips');
+  if (!el) return;
+  el.innerHTML = KIDS.map(function (kid) {
+    var on = choreFilterMastered.has(kid) ? ' on' : '';
+    return '<button class="kchip' + on + '" onclick="toggleChoreFilter(\'' + kid + '\')" style="font-size:12px;padding:4px 14px;">' + esc(kid) + '</button>';
+  }).join('');
+}
+
+function setChoreView(mode) {
+  choreViewMode = mode;
+  renderChoreAssign();
+}
+
+function setChoreViewKid(kid) {
+  choreViewKid = kid;
+  renderChoreAssign();
+}
+
+function renderViewToggle() {
+  var el = document.getElementById('chore-view-bar');
+  if (!el) return;
+  el.innerHTML =
+    '<button class="kchip' + (choreViewMode === 'all' ? ' on' : '') + '" onclick="setChoreView(\'all\')" style="font-size:12px;padding:4px 16px;">All Kids</button>' +
+    '<button class="kchip' + (choreViewMode === 'bykid' ? ' on' : '') + '" onclick="setChoreView(\'bykid\')" style="font-size:12px;padding:4px 16px;">By Kid</button>';
+}
+
 function renderChoreAssign() {
+  renderViewToggle();
+  if (choreViewMode === 'bykid') renderByKidView();
+  else renderAllKidsView();
+}
+
+function renderAllKidsView() {
   var el = document.getElementById('chore-assign-body');
   if (!allChores.length) {
     el.innerHTML = '<div class="empty">No chores yet. <a href="#" onclick="nav(\'manage-chores\',null);return false;">Add some →</a></div>';
-    updateChoreAssignSummary();
+    renderAssignmentOverview();
     return;
   }
 
-  var kid = choreAssignKid;
-  // Filter to chores this kid can do (not 'not-trained' or unset)
-  var eligible = allChores.filter(function (c) {
-    var t = (c.training || {})[kid] || 'not-trained';
-    return t !== 'not-trained';
+  // Filter: hide chores mastered by any filtered kid; require at least one kid eligible
+  var visible = allChores.filter(function (c) {
+    var hidden = false;
+    choreFilterMastered.forEach(function (kid) {
+      if ((c.training || {})[kid] === 'mastered') hidden = true;
+    });
+    if (hidden) return false;
+    return KIDS.some(function (kid) {
+      var t = (c.training || {})[kid];
+      return t && t !== 'not-trained';
+    });
   });
 
-  if (!eligible.length) {
-    el.innerHTML = '<div class="empty">' + esc(kid) + ' has no trained chores yet. Update training status in <a href="#" onclick="nav(\'manage-chores\',null);return false;">Manage Chores</a>.</div>';
-    updateChoreAssignSummary();
+  if (!visible.length) {
+    el.innerHTML = '<div class="empty">No chores match the current filters.</div>';
+    renderAssignmentOverview();
     return;
   }
-
-  var selected = choreAssignments[kid] || new Set();
 
   // Group by room
   var rooms = {};
-  eligible.forEach(function (c) {
+  visible.forEach(function (c) {
     var r = c.room || 'Other';
     if (!rooms[r]) rooms[r] = [];
     rooms[r].push(c);
@@ -2071,59 +2193,199 @@ function renderChoreAssign() {
   Object.keys(rooms).sort().forEach(function (room) {
     html += '<div class="chore-room-hdr">' + esc(room) + '</div>';
     rooms[room].forEach(function (c) {
-      var isSel = selected.has(c.id);
-      var training = (c.training || {})[kid] || 'not-trained';
-      var status = CHORE_TRAINING_STATUSES.find(function (s) { return s.id === training; });
-      var timeStr = c.estimated_minutes ? c.estimated_minutes + ' min' : '';
-      html += '<div class="chore-assign-item' + (isSel ? ' sel' : '') + '" onclick="toggleChoreAssign(\'' + kid + '\',\'' + c.id + '\')">';
-      html += '<div class="chore-assign-cb">' + (isSel ? '✓' : '') + '</div>';
+      var eligibleKids = KIDS.filter(function (kid) {
+        var t = (c.training || {})[kid] || 'not-trained';
+        return t !== 'not-trained';
+      });
+      var anyAssigned = eligibleKids.some(function (kid) { return (choreAssignments[kid] || new Set()).has(c.id); });
+
+      html += '<div class="chore-assign-item' + (anyAssigned ? ' sel' : '') + '">';
+      html += '<div style="flex:1;min-width:0;">';
       html += '<div class="chore-assign-name">' + esc(c.name) + '</div>';
-      html += '<div style="display:flex;align-items:center;gap:6px;">';
-      if (status) html += '<span class="tbadge tbadge-' + training + '">' + esc(status.label) + '</span>';
-      if (timeStr) html += '<span class="chore-assign-meta">' + esc(timeStr) + '</span>';
+      var meta = [];
+      if (c.estimated_minutes) meta.push(c.estimated_minutes + ' min');
+      if (c.tools_needed) meta.push(c.tools_needed);
+      if (meta.length) html += '<div class="chore-assign-meta" style="margin-top:2px;">' + esc(meta.join(' · ')) + '</div>';
+      html += '</div>';
+      // Kid assignment bubbles
+      html += '<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">';
+      eligibleKids.forEach(function (kid) {
+        var assigned = (choreAssignments[kid] || new Set()).has(c.id);
+        html += '<button class="chore-kid-bubble' + (assigned ? ' on' : '') + '" onclick="toggleChoreAssign(\'' + kid + '\',\'' + c.id + '\')">' + esc(kid) + '</button>';
+      });
+      if (eligibleKids.length > 1) {
+        var allAssigned = eligibleKids.every(function (kid) { return (choreAssignments[kid] || new Set()).has(c.id); });
+        html += '<button class="chore-all-bubble' + (allAssigned ? ' on' : '') + '" onclick="assignAllKids(\'' + c.id + '\',[' + eligibleKids.map(function (k) { return '\'' + k + '\''; }).join(',') + '])">' + (allAssigned ? '✓ All' : 'All') + '</button>';
+      }
       html += '</div>';
       html += '</div>';
     });
   });
 
   el.innerHTML = html;
-  updateChoreAssignSummary();
+  renderAssignmentOverview();
 }
 
-function toggleChoreAssign(kid, choreId) {
+function renderByKidView() {
+  if (!choreViewKid || !KIDS.includes(choreViewKid)) choreViewKid = KIDS[0];
+  var kid = choreViewKid;
+
+  // Kid selector tabs
+  var html = '<div class="person-tabs" style="margin-bottom:1.25rem;margin-top:0;">';
+  html += KIDS.map(function (k) {
+    var count = choreAssignments[k] ? choreAssignments[k].size : 0;
+    var on = k === kid ? ' on' : '';
+    return '<button class="kchip' + on + '" onclick="setChoreViewKid(\'' + k + '\')" style="font-size:13px;padding:5px 16px;">' +
+      esc(k) +
+      (count ? ' <span style="background:' + (on ? 'rgba(255,255,255,.35)' : 'var(--accent)') + ';color:#fff;border-radius:100px;padding:1px 7px;font-size:11px;margin-left:4px;">' + count + '</span>' : '') +
+      '</button>';
+  }).join('');
+  html += '</div>';
+
+  var el = document.getElementById('chore-assign-body');
+
+  if (!allChores.length) {
+    el.innerHTML = html + '<div class="empty">No chores yet. <a href="#" onclick="nav(\'manage-chores\',null);return false;">Add some →</a></div>';
+    renderAssignmentOverview();
+    return;
+  }
+
+  // Eligible chores for this kid (applying mastered filters for other kids)
+  var eligible = allChores.filter(function (c) {
+    var t = (c.training || {})[kid] || 'not-trained';
+    if (t === 'not-trained') return false;
+    var hidden = false;
+    choreFilterMastered.forEach(function (fkid) {
+      if (fkid !== kid && (c.training || {})[fkid] === 'mastered') hidden = true;
+    });
+    return !hidden;
+  });
+
+  if (!eligible.length) {
+    el.innerHTML = html + '<div class="empty">' + esc(kid) + ' has no trained chores yet. <a href="#" onclick="nav(\'manage-chores\',null);return false;">Update training →</a></div>';
+    renderAssignmentOverview();
+    return;
+  }
+
+  // Group by training status — mastered first since those are assigned most often
+  var statusOrder = ['mastered', 'needs-reminders', 'in-training'];
+  var statusLabels = { 'mastered': 'Mastered', 'needs-reminders': 'Needs Reminders', 'in-training': 'In Training' };
+  var groups = { 'mastered': [], 'needs-reminders': [], 'in-training': [] };
+  eligible.forEach(function (c) {
+    var t = (c.training || {})[kid] || 'not-trained';
+    if (groups[t]) groups[t].push(c);
+  });
+
+  var selected = choreAssignments[kid] || new Set();
+  var firstSection = true;
+
+  statusOrder.forEach(function (status) {
+    if (!groups[status].length) return;
+    html += '<div style="display:flex;align-items:center;gap:8px;' + (firstSection ? 'margin-bottom:8px;' : 'margin:14px 0 8px;') + '">';
+    html += '<span class="tbadge tbadge-' + status + '">' + esc(statusLabels[status]) + '</span>';
+    html += '<div style="flex:1;height:1px;background:var(--border);"></div></div>';
+    firstSection = false;
+
+    groups[status].forEach(function (c) {
+      var isSel = selected.has(c.id);
+      html += '<div class="chore-assign-item' + (isSel ? ' sel' : '') + '" style="cursor:pointer;" onclick="toggleChoreAssign(\'' + kid + '\',\'' + c.id + '\')">';
+      html += '<div class="chore-assign-cb">' + (isSel ? '✓' : '') + '</div>';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div class="chore-assign-name">' + esc(c.name) + '</div>';
+      var meta = [];
+      if (c.estimated_minutes) meta.push(c.estimated_minutes + ' min');
+      if (c.tools_needed) meta.push(c.tools_needed);
+      if (meta.length) html += '<div class="chore-assign-meta" style="margin-top:2px;">' + esc(meta.join(' · ')) + '</div>';
+      html += '</div></div>';
+    });
+  });
+
+  el.innerHTML = html;
+  renderAssignmentOverview();
+}
+
+async function toggleChoreAssign(kid, choreId) {
   if (!choreAssignments[kid]) choreAssignments[kid] = new Set();
-  if (choreAssignments[kid].has(choreId)) choreAssignments[kid].delete(choreId);
-  else choreAssignments[kid].add(choreId);
-  renderKidTabs();
-  renderChoreAssign();
+  var today = new Date().toISOString().slice(0, 10);
+  if (choreAssignments[kid].has(choreId)) {
+    choreAssignments[kid].delete(choreId);
+    renderChoreAssign();
+    await sb.from('chore_assignments').delete().eq('assignment_date', today).eq('kid', kid).eq('chore_id', choreId);
+  } else {
+    choreAssignments[kid].add(choreId);
+    renderChoreAssign();
+    await sb.from('chore_assignments').insert({ assignment_date: today, kid: kid, chore_id: choreId });
+  }
 }
 
-function clearChoreAssignments() {
+async function assignAllKids(choreId, kids) {
+  var today = new Date().toISOString().slice(0, 10);
+  kids.forEach(function (kid) { if (!choreAssignments[kid]) choreAssignments[kid] = new Set(); });
+  var allAssigned = kids.every(function (kid) { return choreAssignments[kid].has(choreId); });
+  if (allAssigned) {
+    kids.forEach(function (kid) { choreAssignments[kid].delete(choreId); });
+    renderChoreAssign();
+    for (var i = 0; i < kids.length; i++) {
+      await sb.from('chore_assignments').delete().eq('assignment_date', today).eq('kid', kids[i]).eq('chore_id', choreId);
+    }
+  } else {
+    var rows = [];
+    kids.forEach(function (kid) {
+      if (!choreAssignments[kid].has(choreId)) {
+        choreAssignments[kid].add(choreId);
+        rows.push({ assignment_date: today, kid: kid, chore_id: choreId });
+      }
+    });
+    renderChoreAssign();
+    if (rows.length) await sb.from('chore_assignments').insert(rows);
+  }
+}
+
+async function clearChoreAssignments() {
+  var today = new Date().toISOString().slice(0, 10);
   KIDS.forEach(function (kid) { choreAssignments[kid] = new Set(); });
-  renderKidTabs();
   renderChoreAssign();
+  renderAssignmentOverview();
+  await sb.from('chore_assignments').delete().eq('assignment_date', today);
 }
 
-function updateChoreAssignSummary() {
+function renderAssignmentOverview() {
   var el = document.getElementById('chore-assign-summary');
   if (!el) return;
-  var parts = KIDS.map(function (kid) {
-    var count = choreAssignments[kid] ? choreAssignments[kid].size : 0;
-    return count ? esc(kid) + ': ' + count + ' chore' + (count === 1 ? '' : 's') : null;
-  }).filter(Boolean);
-  el.textContent = parts.length ? 'Selected — ' + parts.join(' · ') : '';
+  var anyAssigned = KIDS.some(function (kid) { return choreAssignments[kid] && choreAssignments[kid].size > 0; });
+  if (!anyAssigned) { el.innerHTML = ''; return; }
+
+  var html = '<div style="margin-top:.5rem;">';
+  html += '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:.75rem;">Assignment Overview</div>';
+  html += '<div class="chore-overview-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">';
+  KIDS.forEach(function (kid) {
+    var ids = choreAssignments[kid] ? Array.from(choreAssignments[kid]) : [];
+    var chores = ids.map(function (id) { return allChores.find(function (c) { return c.id === id; }); }).filter(Boolean);
+    chores.sort(function (a, b) {
+      if ((a.room || '') !== (b.room || '')) return (a.room || '').localeCompare(b.room || '');
+      return a.name.localeCompare(b.name);
+    });
+    html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;">';
+    html += '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">' + esc(kid) + ' <span style="font-weight:400;color:var(--text3);">(' + chores.length + ')</span></div>';
+    if (!chores.length) {
+      html += '<div style="font-size:12px;color:var(--text3);">None assigned</div>';
+    } else {
+      html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+      chores.forEach(function (c) {
+        html += '<div style="font-size:12px;color:var(--text2);">◦ ' + esc(c.name) + '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div></div>';
+  el.innerHTML = html;
 }
 
 // ── CHORE PRINT ───────────────────────────────────────────────────────────────
 function printChoreCards() {
-  // Check at least one kid has chores selected
-  var anySelected = KIDS.some(function (kid) {
-    return choreAssignments[kid] && choreAssignments[kid].size > 0;
-  });
-  if (!anySelected) {
-    alert('Please select at least one chore for a kid before printing.');
-    return;
-  }
+  var anySelected = KIDS.some(function (kid) { return choreAssignments[kid] && choreAssignments[kid].size > 0; });
+  if (!anySelected) { alert('Please assign at least one chore before printing.'); return; }
 
   var dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   var html = '';
@@ -2131,20 +2393,16 @@ function printChoreCards() {
   KIDS.forEach(function (kid) {
     var selected = choreAssignments[kid];
     if (!selected || selected.size === 0) return;
-
     var chores = allChores.filter(function (c) { return selected.has(c.id); });
-    // Sort by room then name
     chores.sort(function (a, b) {
       if ((a.room || '') < (b.room || '')) return -1;
       if ((a.room || '') > (b.room || '')) return 1;
       return (a.name || '').localeCompare(b.name || '');
     });
-
     html += '<div class="cpr-kid-section">';
     html += '<div class="cpr-kid-name">' + esc(kid) + '\'s Chores</div>';
     html += '<div class="cpr-date">' + esc(dateStr) + '</div>';
     html += '<div class="cpr-cards">';
-
     chores.forEach(function (c) {
       html += '<div class="cpr-card">';
       html += '<div class="cpr-check"></div>';
@@ -2155,7 +2413,6 @@ function printChoreCards() {
       if (c.estimated_minutes) html += '<div class="cpr-card-time">⏱ About ' + c.estimated_minutes + ' minutes</div>';
       html += '</div></div>';
     });
-
     html += '</div></div>';
   });
 

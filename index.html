@@ -112,7 +112,7 @@
 .ana-table tr:last-child td{border-bottom:none;}
 .ana-table tbody tr:hover td{background:var(--surface2);}
 .ana-mode-row{display:flex;gap:8px;align-items:center;margin-bottom:1.25rem;}
-@media(max-width:600px){.ana-stat-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.ana-stat-grid{grid-template-columns:repeat(2,1fr);}.chore-overview-grid{grid-template-columns:1fr!important;}}
 /* ── MOOD LOG MODAL ────────────────────────────────────────────────────────── */
 .ml-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center;padding:1rem;}
 .ml-overlay.open{display:flex;}
@@ -139,13 +139,18 @@
 .tchip-in-training.on{background:var(--amber);color:#fff;border-color:var(--amber);}
 .tchip-needs-reminders.on{background:var(--mauve);color:#fff;border-color:var(--mauve);}
 .tchip-mastered.on{background:var(--sage);color:#fff;border-color:var(--sage);}
-.chore-assign-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:5px;background:var(--surface);cursor:pointer;transition:background .12s;user-select:none;}
-.chore-assign-item:hover{background:var(--surface2);}
+.chore-assign-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:5px;background:var(--surface);transition:background .12s;}
 .chore-assign-item.sel{background:var(--sage-l);border-color:#7abf96;}
+.chore-assign-name{font-size:13px;font-weight:500;color:var(--text);}
+.chore-assign-meta{font-size:11px;color:var(--text3);}
 .chore-assign-cb{width:18px;height:18px;border:2px solid var(--border2);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;}
 .chore-assign-item.sel .chore-assign-cb{background:var(--sage);border-color:var(--sage);color:#fff;}
-.chore-assign-name{flex:1;font-size:13px;font-weight:500;color:var(--text);}
-.chore-assign-meta{font-size:11px;color:var(--text3);white-space:nowrap;}
+.chore-kid-bubble{font-size:11px;padding:3px 10px;border-radius:100px;border:1.5px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-family:'Jost',sans-serif;transition:all .12s;font-weight:500;white-space:nowrap;}
+.chore-kid-bubble:hover{border-color:var(--accent);color:var(--accent);}
+.chore-kid-bubble.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.chore-all-bubble{font-size:11px;padding:3px 10px;border-radius:100px;border:1.5px dashed var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-family:'Jost',sans-serif;transition:all .12s;font-weight:500;white-space:nowrap;}
+.chore-all-bubble:hover{border-color:var(--sage);color:var(--sage);}
+.chore-all-bubble.on{background:var(--sage);border-color:var(--sage);border-style:solid;color:#fff;}
 .cf-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center;padding:1rem;}
 .cf-overlay.open{display:flex;}
 .cf-modal{background:var(--surface);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);width:min(580px,100%);max-height:92vh;overflow-y:auto;padding:1.5rem;}
@@ -1128,18 +1133,27 @@
 <!-- CHORE ASSIGNMENT -->
 <div class="pg" id="pg-chores">
   <h1 class="pg-title">Chore Assignment</h1>
-  <p class="pg-sub">Select chores for each kid, then print their cards.</p>
+  <p class="pg-sub">Assign chores to each kid, then print their cards. Assignments save automatically and reset each day.</p>
 
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1.25rem;">
-    <div class="person-tabs" id="chore-kid-tabs" style="margin-bottom:0;flex:1;min-width:0;"></div>
-    <button class="btn btn-p" onclick="printChoreCards()">Print Chore Cards</button>
-    <button class="btn" onclick="clearChoreAssignments()">Clear All</button>
+  <div class="card" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1rem;padding:10px 14px;">
+    <span style="font-size:12px;font-weight:600;color:var(--text3);white-space:nowrap;">Templates:</span>
+    <div id="chore-template-bar" style="display:flex;gap:6px;align-items:center;flex:1;flex-wrap:wrap;min-width:0;"></div>
+    <button class="btn" onclick="saveAsTemplate()" style="font-size:12px;padding:5px 12px;white-space:nowrap;flex-shrink:0;">Save as Template</button>
   </div>
+
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1rem;">
+    <span style="font-size:12px;color:var(--text3);white-space:nowrap;">Hide mastered by:</span>
+    <div id="chore-filter-chips" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
+    <button class="btn btn-p" onclick="printChoreCards()" style="flex-shrink:0;">Print Cards</button>
+    <button class="btn" onclick="clearChoreAssignments()" style="flex-shrink:0;">Clear All</button>
+  </div>
+
+  <div id="chore-view-bar" style="display:flex;gap:6px;margin-bottom:.75rem;"></div>
 
   <div class="card" id="chore-assign-body">
     <div class="empty">Loading chores…</div>
   </div>
-  <div id="chore-assign-summary" style="margin-top:1rem;font-size:13px;color:var(--text3);"></div>
+  <div id="chore-assign-summary" style="margin-top:1rem;"></div>
 </div>
 
 <!-- MANAGE CHORES -->
