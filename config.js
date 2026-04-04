@@ -174,6 +174,22 @@ var HEALTH_SYMPTOMS = [
 var HEALTH_CARE_PROVIDERS = ['Haley', 'Dave', 'Both'];
 var SYMPTOM_SEVERITY_LABELS = ['','Minor', 'Mild', 'Moderate', 'Severe'];
 
+// ── CHORES ────────────────────────────────────────────────────────────────────
+var CHORE_ROOMS = [
+  'Bathrooms', 'Bedrooms', 'Daily Tasks', 'Dishes', 'Downstairs',
+  'Entry Way', 'General', 'Kitchen', 'Laundry', 'Living & Dining Room',
+  'Outside', 'Pets', 'Trash', 'Other',
+];
+
+// Training statuses for each kid per chore
+// 'not-trained' | 'in-training' | 'needs-reminders' | 'mastered'
+var CHORE_TRAINING_STATUSES = [
+  { id: 'not-trained',     label: 'Not Trained'     },
+  { id: 'in-training',     label: 'In Training'     },
+  { id: 'needs-reminders', label: 'Needs Reminders' },
+  { id: 'mastered',        label: 'Mastered'        },
+];
+
 // ── OUR PARENTING LOG ─────────────────────────────────────────────────────────
 var OUR_PARENTING_ACTIONS = [
   { id: 'scheduled-after-3pm',    label: 'Scheduled appointment after 3pm',         notify: false, decline: false },

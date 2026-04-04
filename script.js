@@ -194,6 +194,7 @@ function onAuthenticated() {
   loadHabits().then(renderDashboard);
   loadEntries().then(updateCount);
   loadPatterns();
+  loadChores();
 }
 
 // ── LOGGER ────────────────────────────────────────────────────────────────────
@@ -228,6 +229,8 @@ function nav(page, btn) {
   if (page === 'memories') initMemoriesPage();
   if (page === 'manage-habits') initManageHabits();
   if (page === 'manage-patterns') initManagePatterns();
+  if (page === 'manage-chores') initManageChores();
+  if (page === 'chores') initChoresPage();
   if (page === 'settings') renderThemePicker();
   if (page === 'analytics') initAnalytics();
 }
@@ -1832,6 +1835,332 @@ function showToast(prefix, type, msg) {
   el.textContent = msg;
   el.style.display = 'block';
   setTimeout(function () { el.style.display = 'none'; }, 4000);
+}
+
+// ── CHORES ────────────────────────────────────────────────────────────────────
+var allChores = [];
+var choreAssignments = {}; // { "Landon": Set of chore ids, "Luke": Set, "Leo": Set }
+var choreAssignKid = KIDS[0] || 'Landon';
+var choreEditId = null; // chore id being edited in form, null = new
+var choreEditTraining = {}; // { kidName: statusId } local form state
+
+async function loadChores() {
+  var { data, error } = await sb.from('chores').select('*').eq('active', true).order('room').order('name');
+  if (!error && data) allChores = data;
+}
+
+// ── MANAGE CHORES ─────────────────────────────────────────────────────────────
+function initManageChores() {
+  renderChoreList();
+}
+
+function renderChoreList() {
+  var el = document.getElementById('chores-manage-list');
+  if (!allChores.length) {
+    el.innerHTML = '<div class="card"><div class="empty">No chores yet. Click "+ New Chore" to add your first one.</div></div>';
+    return;
+  }
+  // Group by room
+  var rooms = {};
+  allChores.forEach(function (c) {
+    var r = c.room || 'Other';
+    if (!rooms[r]) rooms[r] = [];
+    rooms[r].push(c);
+  });
+  var html = '';
+  Object.keys(rooms).sort().forEach(function (room) {
+    html += '<div class="card" style="margin-bottom:12px;">';
+    html += '<div class="ct">' + room + '</div>';
+    rooms[room].forEach(function (c) {
+      html += '<div class="chore-item">';
+      html += '<div class="chore-body">';
+      html += '<div class="chore-name">' + esc(c.name) + '</div>';
+      var meta = [];
+      if (c.estimated_minutes) meta.push(c.estimated_minutes + ' min');
+      if (c.tools_needed) meta.push(c.tools_needed);
+      if (meta.length) html += '<div class="chore-meta">' + esc(meta.join(' · ')) + '</div>';
+      // Training badges per kid
+      html += '<div class="chore-train-row">';
+      KIDS.forEach(function (kid) {
+        var training = (c.training || {})[kid] || 'not-trained';
+        var status = CHORE_TRAINING_STATUSES.find(function (s) { return s.id === training; });
+        var label = status ? status.label : training;
+        html += '<span class="tbadge tbadge-' + training + '">' + esc(kid) + ': ' + esc(label) + '</span>';
+      });
+      html += '</div>';
+      html += '</div>';
+      html += '<button class="btn" style="flex-shrink:0;font-size:12px;padding:4px 12px;" onclick="openChoreForm(\'' + c.id + '\')">Edit</button>';
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function openChoreForm(choreId) {
+  choreEditId = choreId || null;
+  choreEditTraining = {};
+
+  // Populate room dropdown
+  var roomEl = document.getElementById('cf-room');
+  roomEl.innerHTML = CHORE_ROOMS.map(function (r) {
+    return '<option value="' + esc(r) + '">' + esc(r) + '</option>';
+  }).join('');
+
+  // Reset or pre-fill fields
+  var chore = choreId ? allChores.find(function (c) { return c.id === choreId; }) : null;
+  document.getElementById('cf-title').textContent = chore ? 'Edit Chore' : 'New Chore';
+  document.getElementById('cf-name').value = chore ? (chore.name || '') : '';
+  document.getElementById('cf-time').value = chore ? (chore.estimated_minutes || '') : '';
+  document.getElementById('cf-tools').value = chore ? (chore.tools_needed || '') : '';
+  document.getElementById('cf-instructions').value = chore ? (chore.instructions || '') : '';
+  if (chore && chore.room) roomEl.value = chore.room;
+  document.getElementById('cf-delete-btn').style.display = chore ? '' : 'none';
+  document.getElementById('cf-ok').textContent = '';
+  document.getElementById('cf-err').textContent = '';
+
+  // Build training matrix
+  if (chore && chore.training) {
+    KIDS.forEach(function (kid) { choreEditTraining[kid] = (chore.training)[kid] || 'not-trained'; });
+  } else {
+    KIDS.forEach(function (kid) { choreEditTraining[kid] = 'not-trained'; });
+  }
+  renderTrainingMatrix();
+
+  document.getElementById('chore-form-overlay').classList.add('open');
+}
+
+function renderTrainingMatrix() {
+  var el = document.getElementById('cf-training-matrix');
+  el.innerHTML = KIDS.map(function (kid) {
+    return '<div style="margin-bottom:10px;">' +
+      '<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">' + esc(kid) + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+      CHORE_TRAINING_STATUSES.map(function (s) {
+        var on = (choreEditTraining[kid] || 'not-trained') === s.id ? ' on' : '';
+        return '<div class="tchip tchip-' + s.id + on + '" onclick="setChoreTraining(\'' + kid + '\',\'' + s.id + '\')">' + esc(s.label) + '</div>';
+      }).join('') +
+      '</div></div>';
+  }).join('');
+}
+
+function setChoreTraining(kid, statusId) {
+  choreEditTraining[kid] = statusId;
+  renderTrainingMatrix();
+}
+
+function closeChoreForm() {
+  document.getElementById('chore-form-overlay').classList.remove('open');
+}
+
+function closeChoreFormOverlay(e) {
+  if (e && e.target !== document.getElementById('chore-form-overlay')) return;
+  closeChoreForm();
+}
+
+async function saveChore() {
+  var name = document.getElementById('cf-name').value.trim();
+  if (!name) { showToast('cf', 'err', 'Please enter a chore name.'); return; }
+
+  var payload = {
+    name: name,
+    room: document.getElementById('cf-room').value,
+    estimated_minutes: parseInt(document.getElementById('cf-time').value) || null,
+    tools_needed: document.getElementById('cf-tools').value.trim() || null,
+    instructions: document.getElementById('cf-instructions').value.trim() || null,
+    training: choreEditTraining,
+    active: true,
+  };
+
+  var error;
+  if (choreEditId) {
+    var res = await sb.from('chores').update(payload).eq('id', choreEditId).select();
+    error = res.error;
+    if (!error && res.data) {
+      var idx = allChores.findIndex(function (c) { return c.id === choreEditId; });
+      if (idx >= 0) allChores[idx] = res.data[0];
+    }
+  } else {
+    var res2 = await sb.from('chores').insert(payload).select();
+    error = res2.error;
+    if (!error && res2.data) allChores.push(res2.data[0]);
+  }
+
+  if (error) { showToast('cf', 'err', 'Save failed: ' + error.message); return; }
+  showToast('cf', 'ok', choreEditId ? 'Chore updated.' : 'Chore added.');
+  renderChoreList();
+  setTimeout(closeChoreForm, 900);
+}
+
+async function confirmDeleteChore() {
+  if (!choreEditId) return;
+  if (!confirm('Delete this chore? This cannot be undone.')) return;
+  var { error } = await sb.from('chores').update({ active: false }).eq('id', choreEditId);
+  if (error) { showToast('cf', 'err', 'Delete failed: ' + error.message); return; }
+  allChores = allChores.filter(function (c) { return c.id !== choreEditId; });
+  closeChoreForm();
+  renderChoreList();
+}
+
+// ── CHORE ASSIGNMENT ──────────────────────────────────────────────────────────
+function initChoresPage() {
+  // Init assignments if not yet set
+  KIDS.forEach(function (kid) {
+    if (!choreAssignments[kid]) choreAssignments[kid] = new Set();
+  });
+  if (!KIDS.includes(choreAssignKid)) choreAssignKid = KIDS[0];
+
+  // If chores haven't loaded yet, load them first
+  if (!allChores.length) {
+    loadChores().then(function () { renderKidTabs(); renderChoreAssign(); });
+  } else {
+    renderKidTabs();
+    renderChoreAssign();
+  }
+}
+
+function renderKidTabs() {
+  var el = document.getElementById('chore-kid-tabs');
+  el.innerHTML = KIDS.map(function (kid) {
+    var count = choreAssignments[kid] ? choreAssignments[kid].size : 0;
+    var active = kid === choreAssignKid ? ' active' : '';
+    return '<button class="kchip' + active + '" onclick="setChoreAssignKid(\'' + kid + '\')" style="font-size:13px;padding:6px 14px;">' +
+      esc(kid) + (count ? ' <span style="background:var(--accent);color:#fff;border-radius:100px;padding:1px 6px;font-size:11px;">' + count + '</span>' : '') +
+      '</button>';
+  }).join('');
+}
+
+function setChoreAssignKid(kid) {
+  choreAssignKid = kid;
+  renderKidTabs();
+  renderChoreAssign();
+}
+
+function renderChoreAssign() {
+  var el = document.getElementById('chore-assign-body');
+  if (!allChores.length) {
+    el.innerHTML = '<div class="empty">No chores yet. <a href="#" onclick="nav(\'manage-chores\',null);return false;">Add some →</a></div>';
+    updateChoreAssignSummary();
+    return;
+  }
+
+  var kid = choreAssignKid;
+  // Filter to chores this kid can do (not 'not-trained' or unset)
+  var eligible = allChores.filter(function (c) {
+    var t = (c.training || {})[kid] || 'not-trained';
+    return t !== 'not-trained';
+  });
+
+  if (!eligible.length) {
+    el.innerHTML = '<div class="empty">' + esc(kid) + ' has no trained chores yet. Update training status in <a href="#" onclick="nav(\'manage-chores\',null);return false;">Manage Chores</a>.</div>';
+    updateChoreAssignSummary();
+    return;
+  }
+
+  var selected = choreAssignments[kid] || new Set();
+
+  // Group by room
+  var rooms = {};
+  eligible.forEach(function (c) {
+    var r = c.room || 'Other';
+    if (!rooms[r]) rooms[r] = [];
+    rooms[r].push(c);
+  });
+
+  var html = '';
+  Object.keys(rooms).sort().forEach(function (room) {
+    html += '<div class="chore-room-hdr">' + esc(room) + '</div>';
+    rooms[room].forEach(function (c) {
+      var isSel = selected.has(c.id);
+      var training = (c.training || {})[kid] || 'not-trained';
+      var status = CHORE_TRAINING_STATUSES.find(function (s) { return s.id === training; });
+      var timeStr = c.estimated_minutes ? c.estimated_minutes + ' min' : '';
+      html += '<div class="chore-assign-item' + (isSel ? ' sel' : '') + '" onclick="toggleChoreAssign(\'' + kid + '\',\'' + c.id + '\')">';
+      html += '<div class="chore-assign-cb">' + (isSel ? '✓' : '') + '</div>';
+      html += '<div class="chore-assign-name">' + esc(c.name) + '</div>';
+      html += '<div style="display:flex;align-items:center;gap:6px;">';
+      if (status) html += '<span class="tbadge tbadge-' + training + '">' + esc(status.label) + '</span>';
+      if (timeStr) html += '<span class="chore-assign-meta">' + esc(timeStr) + '</span>';
+      html += '</div>';
+      html += '</div>';
+    });
+  });
+
+  el.innerHTML = html;
+  updateChoreAssignSummary();
+}
+
+function toggleChoreAssign(kid, choreId) {
+  if (!choreAssignments[kid]) choreAssignments[kid] = new Set();
+  if (choreAssignments[kid].has(choreId)) choreAssignments[kid].delete(choreId);
+  else choreAssignments[kid].add(choreId);
+  renderKidTabs();
+  renderChoreAssign();
+}
+
+function clearChoreAssignments() {
+  KIDS.forEach(function (kid) { choreAssignments[kid] = new Set(); });
+  renderKidTabs();
+  renderChoreAssign();
+}
+
+function updateChoreAssignSummary() {
+  var el = document.getElementById('chore-assign-summary');
+  if (!el) return;
+  var parts = KIDS.map(function (kid) {
+    var count = choreAssignments[kid] ? choreAssignments[kid].size : 0;
+    return count ? esc(kid) + ': ' + count + ' chore' + (count === 1 ? '' : 's') : null;
+  }).filter(Boolean);
+  el.textContent = parts.length ? 'Selected — ' + parts.join(' · ') : '';
+}
+
+// ── CHORE PRINT ───────────────────────────────────────────────────────────────
+function printChoreCards() {
+  // Check at least one kid has chores selected
+  var anySelected = KIDS.some(function (kid) {
+    return choreAssignments[kid] && choreAssignments[kid].size > 0;
+  });
+  if (!anySelected) {
+    alert('Please select at least one chore for a kid before printing.');
+    return;
+  }
+
+  var dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  var html = '';
+
+  KIDS.forEach(function (kid) {
+    var selected = choreAssignments[kid];
+    if (!selected || selected.size === 0) return;
+
+    var chores = allChores.filter(function (c) { return selected.has(c.id); });
+    // Sort by room then name
+    chores.sort(function (a, b) {
+      if ((a.room || '') < (b.room || '')) return -1;
+      if ((a.room || '') > (b.room || '')) return 1;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    html += '<div class="cpr-kid-section">';
+    html += '<div class="cpr-kid-name">' + esc(kid) + '\'s Chores</div>';
+    html += '<div class="cpr-date">' + esc(dateStr) + '</div>';
+    html += '<div class="cpr-cards">';
+
+    chores.forEach(function (c) {
+      html += '<div class="cpr-card">';
+      html += '<div class="cpr-check"></div>';
+      html += '<div class="cpr-card-body">';
+      html += '<div class="cpr-card-name">' + esc(c.name) + '</div>';
+      if (c.tools_needed) html += '<div class="cpr-card-tools">🧰 ' + esc(c.tools_needed) + '</div>';
+      if (c.instructions) html += '<div class="cpr-card-instr">' + esc(c.instructions) + '</div>';
+      if (c.estimated_minutes) html += '<div class="cpr-card-time">⏱ About ' + c.estimated_minutes + ' minutes</div>';
+      html += '</div></div>';
+    });
+
+    html += '</div></div>';
+  });
+
+  document.getElementById('chore-print-root').innerHTML = html;
+  window.print();
 }
 
 // ── DATA ANALYSIS ─────────────────────────────────────────────────────────────
