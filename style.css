@@ -213,6 +213,11 @@ button.atag-btn:hover{text-decoration:underline;}
 .dash-greeting{font-size:22px;font-weight:600;color:var(--text2);margin-bottom:4px;}
 .dash-date{font-size:13px;color:var(--text3);margin-bottom:1.5rem;}
 .quick-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:1.5rem;}
+.dash-layout{display:flex;gap:2rem;align-items:flex-start;}
+.dash-main{flex:1;min-width:0;}
+.dash-hero{flex-shrink:0;width:340px;margin-top:3.75rem;}
+.dash-hero img{width:100%;height:auto;display:block;}
+body.theme-sage .dash-hero,body.theme-slate .dash-hero,body.theme-amber .dash-hero,body.theme-plum .dash-hero{display:none;}
 .qa-btn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:1.1rem 1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);cursor:pointer;transition:all .15s;box-shadow:var(--shadow);text-align:left;font-family:'Jost',sans-serif;}
 .qa-btn:hover{border-color:var(--border2);background:var(--surface2);transform:translateY(-1px);}
 .qa-icon{font-size:22px;margin-bottom:2px;}
@@ -303,4 +308,5 @@ button.atag-btn:hover{text-decoration:underline;}
   .shell{grid-template-columns:1fr;}.sidebar{display:none;}
   .main{padding:1rem;}.stats-row{grid-template-columns:1fr 1fr;}
   .quick-actions{grid-template-columns:1fr;}
+  .dash-hero{display:none;}
 }
