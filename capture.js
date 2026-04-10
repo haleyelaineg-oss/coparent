@@ -17,6 +17,8 @@ var qcHealthMode = 'new';       // 'new' | 'update'
 var qcHealthExistingId = null;  // health_log id being updated
 var qcHealthUpdateType = 'temperature';
 var qcHealthRecentLogs = [];
+var qcNoteFor = '';
+var qcNoteList = '';
 var inboxEntries = [];
 var inboxFilter = 'all';
 
@@ -94,7 +96,7 @@ function buildQCModalHTML() {
     qcTile('mary',    QC_ICONS.swap,    'Mary Interaction',  'Communication or co-parenting moment'),
     qcTile('boys',    QC_ICONS.smile,   'Boys Check-In',     'Quick mood + notes per kid'),
     qcTile('memory',  QC_ICONS.heart,   'Positive Moment',   'Memory, milestone, proud moment'),
-    qcTile('note',    QC_ICONS.pencil,  'Note to Self',      'Quick note or reminder'),
+    qcTile('note',    QC_ICONS.pencil,  'Reminder',          'Add to a list or jot a reminder'),
     qcTile('health',  QC_ICONS.medical, 'Health Record',     'Track illness or injury'),
     qcTile('grocery', QC_ICONS.list,    'Grocery Item',      'Add to the grocery list'),
     '</div>',
@@ -170,16 +172,26 @@ function buildQCModalHTML() {
     '  </div>',
     '</div>',
 
-    // ── Note form
+    // ── Reminder form
     '<div id="qc-form-note" class="qc-form" style="display:none;">',
     '  <div class="fg1" style="margin-bottom:12px;">',
-    '    <label class="fgl">Note</label>',
-    '    <textarea id="qc-note-text" style="margin-top:6px;min-height:100px;" placeholder="Write anything — reminders, observations, things to follow up on..."></textarea>',
+    '    <label class="fgl">Reminder</label>',
+    '    <textarea id="qc-note-text" style="margin-top:6px;min-height:80px;" placeholder="What do you want to remember?"></textarea>',
+    '  </div>',
+    '  <div class="fg1" style="margin-bottom:12px;">',
+    '    <label class="fgl">For <span style="font-weight:400;color:var(--text3);font-size:11px;">(optional)</span></label>',
+    '    <div class="source-row" style="margin-top:6px;" id="qc-note-for">' +
+      (REMINDER_FOR || []).map(function(w){ return '<div class="kchip" id="qcnf-'+w+'" onclick="setQCNoteFor(\''+w+'\',this)">'+w+'</div>'; }).join('') +
+    '</div>',
+    '  </div>',
+    '  <div class="fg1" style="margin-bottom:12px;">',
+    '    <label class="fgl">Add to list <span style="font-weight:400;color:var(--text3);font-size:11px;">(optional)</span></label>',
+    '    <div class="source-row" style="margin-top:6px;flex-wrap:wrap;" id="qc-note-list"></div>',
     '  </div>',
     '  <div id="qc-note-msg" style="font-size:13px;min-height:18px;margin-bottom:4px;"></div>',
     '  <div class="btn-row">',
     '    <button class="btn" onclick="backToQCHub()">Cancel</button>',
-    '    <button class="btn btn-p" onclick="saveQCNote()">Save to Inbox</button>',
+    '    <button class="btn btn-p" onclick="saveQCNote()">Save Reminder</button>',
     '  </div>',
     '</div>',
 
@@ -309,7 +321,7 @@ function backToQCHub() {
 
 var QC_TITLES = {
   mary: 'Mary Interaction', boys: 'Boys Check-In', memory: 'Positive Moment',
-  note: 'Note to Self', health: 'Health Record', grocery: 'Grocery Item',
+  note: 'Reminder', health: 'Health Record', grocery: 'Grocery Item',
 };
 
 function showQCForm(id) {
@@ -323,7 +335,7 @@ function showQCForm(id) {
   if (id === 'mary') resetQCMary();
   if (id === 'boys') initQCBoysForm();
   if (id === 'memory') initQCMemoryForm();
-  if (id === 'note') { document.getElementById('qc-note-text').value = ''; setQCMsg('note', ''); }
+  if (id === 'note') { resetQCNote(); }
   if (id === 'health') resetQCHealth();
   if (id === 'grocery') {
     document.getElementById('qc-grocery-name').value = '';
@@ -491,23 +503,56 @@ async function saveQCMemory() {
   setTimeout(backToQCHub, 800);
 }
 
-// ── NOTE FORM ─────────────────────────────────────────────────────────────────
+// ── NOTE / REMINDER FORM ──────────────────────────────────────────────────────
+function resetQCNote() {
+  qcNoteFor = ''; qcNoteList = '';
+  document.getElementById('qc-note-text').value = '';
+  document.querySelectorAll('#qc-note-for .kchip').forEach(function(c){ c.classList.remove('on'); });
+  refreshQCNoteLists();
+  setQCMsg('note', '');
+}
+
+// Re-renders the list chips in the QC reminder form using current remLists (from reminders.js)
+function refreshQCNoteLists() {
+  var el = document.getElementById('qc-note-list');
+  if (!el) return;
+  var lists = (typeof remLists !== 'undefined' && remLists.length) ? remLists : (REMINDER_LISTS || []).map(function(n){ return {name:n}; });
+  el.innerHTML = lists.map(function(l) {
+    var on = qcNoteList === l.name ? ' on' : '';
+    var safeId = l.name.replace(/\s+/g,'').replace(/[^a-zA-Z0-9]/g,'');
+    return '<div class="kchip' + on + '" id="qcnl-' + safeId + '" onclick="setQCNoteList(\'' + l.name.replace(/'/g,"\\'") + '\',this)">' + l.name + '</div>';
+  }).join('');
+}
+
+function setQCNoteFor(val, el) {
+  if (qcNoteFor === val) { qcNoteFor = ''; el.classList.remove('on'); return; }
+  qcNoteFor = val;
+  document.querySelectorAll('#qc-note-for .kchip').forEach(function(c){ c.classList.remove('on'); });
+  el.classList.add('on');
+}
+
+function setQCNoteList(val, el) {
+  if (qcNoteList === val) { qcNoteList = ''; el.classList.remove('on'); return; }
+  qcNoteList = val;
+  document.querySelectorAll('#qc-note-list .kchip').forEach(function(c){ c.classList.remove('on'); });
+  el.classList.add('on');
+}
+
 async function saveQCNote() {
   var text = document.getElementById('qc-note-text').value.trim();
   if (!text) { setQCMsg('note', 'Please write something.', true); return; }
   setQCMsg('note', '');
-  var entry = {
-    entry_date: new Date().toISOString(),
-    entry_type: 'quick-capture',
-    category: 'note',
-    logger: ls('logger') || 'Haley',
-    facts: text,
+  var row = {
+    text: text,
+    for_who: qcNoteFor || null,
+    list_type: qcNoteList || null,
+    added_by: ls('logger') || 'Haley',
+    completed: false,
   };
-  var { error } = await sb.from('entries').insert(entry);
+  var { error } = await sb.from('reminders').insert(row);
   if (error) { setQCMsg('note', 'Save failed: ' + error.message, true); return; }
   setQCMsg('note', 'Saved!');
-  await updateInboxBadge();
-  setTimeout(backToQCHub, 800);
+  setTimeout(backToQCHub, 700);
 }
 
 // ── HEALTH FORM ───────────────────────────────────────────────────────────────

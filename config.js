@@ -194,6 +194,10 @@ var CHORE_TRAINING_STATUSES = [
   { id: 'mastered',        label: 'Mastered'        },
 ];
 
+// ── REMINDERS ─────────────────────────────────────────────────────────────────
+var REMINDER_LISTS = ['To-Do', 'To-Watch', 'Errand', 'Gift Ideas'];
+var REMINDER_FOR   = ['Dave', 'Haley', 'Both'];
+
 // ── OUR PARENTING LOG ─────────────────────────────────────────────────────────
 var OUR_PARENTING_ACTIONS = [
   { id: 'scheduled-after-3pm',    label: 'Scheduled appointment after 3pm',         notify: false, decline: false },

@@ -235,6 +235,7 @@ function nav(page, btn) {
   if (page === 'chores') initChoresPage();
   if (page === 'meals') initMealsPage();
   if (page === 'inbox') initInbox();
+  if (page === 'reminders') initRemindersPage();
   if (page === 'settings') renderThemePicker();
   if (page === 'analytics') initAnalytics();
 }
