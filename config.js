@@ -174,6 +174,10 @@ var HEALTH_SYMPTOMS = [
 var HEALTH_CARE_PROVIDERS = ['Haley', 'Dave', 'Both'];
 var SYMPTOM_SEVERITY_LABELS = ['','Minor', 'Mild', 'Moderate', 'Severe'];
 
+// ── MEAL PLANNER ─────────────────────────────────────────────────────────────
+var MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack', 'Other'];
+var MEAL_PEOPLE = ['Dave', 'Haley', 'Landon', 'Luke', 'Leo'];
+
 // ── CHORES ────────────────────────────────────────────────────────────────────
 var CHORE_ROOMS = [
   'Bathrooms', 'Bedrooms', 'Daily Tasks', 'Dishes', 'Downstairs',

@@ -216,6 +216,7 @@ function loadLogger() {
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
 function nav(page, btn) {
+  document.querySelectorAll('.cf-overlay.open').forEach(function (el) { el.classList.remove('open'); });
   document.querySelectorAll('.pg').forEach(function (p) { p.classList.remove('active'); });
   document.querySelectorAll('.nb').forEach(function (b) { b.classList.remove('active'); });
   document.getElementById('pg-' + page).classList.add('active');
@@ -231,6 +232,7 @@ function nav(page, btn) {
   if (page === 'manage-patterns') initManagePatterns();
   if (page === 'manage-chores') initManageChores();
   if (page === 'chores') initChoresPage();
+  if (page === 'meals') initMealsPage();
   if (page === 'settings') renderThemePicker();
   if (page === 'analytics') initAnalytics();
 }

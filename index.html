@@ -240,6 +240,7 @@
   <div class="nav-sec">
     <div class="nav-lbl">Family</div>
     <button class="nb" onclick="nav('chores',this)"><span class="ni">☑</span> Chore Assignment</button>
+    <button class="nb" onclick="nav('meals',this)"><span class="ni">🍽</span> Meal Planner</button>
   </div>
   <div class="nav-sec">
     <div class="nav-lbl">Settings</div>
@@ -254,8 +255,6 @@
 
 <!-- DASHBOARD -->
 <div class="pg active" id="pg-dashboard">
-  <div class="dash-layout">
-  <div class="dash-main">
   <div class="dash-greeting" id="dash-greeting">Hello!</div>
   <div class="dash-date" id="dash-date"></div>
   <div class="quick-actions">
@@ -306,11 +305,7 @@
     <div class="ct">Habits</div>
     <div id="dash-habits"></div>
   </div>
-  </div><!-- end dash-main -->
-  <div class="dash-hero">
-    <img src="images/hero.png" alt="CoParent home illustration"/>
   </div>
-  </div><!-- end dash-layout -->
 </div>
 
 <!-- DAILY REFLECTION -->
@@ -1145,6 +1140,95 @@
   </div>
 </div>
 
+<!-- MEAL PLANNER -->
+<div class="pg" id="pg-meals">
+  <h1 class="pg-title">Meal Planner</h1>
+  <div id="meal-tab-bar" style="display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap;"></div>
+  <div id="meal-planner-view"></div>
+  <div id="meal-recipes-view" style="display:none;"></div>
+  <div id="meal-grocery-view" style="display:none;"></div>
+</div>
+
+<!-- ADD MEAL MODAL -->
+<div class="cf-overlay" id="meal-add-overlay" onclick="closeMealAddOverlay(event)">
+  <div class="cf-modal" onclick="event.stopPropagation()" style="max-width:480px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div class="ct" style="margin:0;" id="meal-add-title">Add Meal</div>
+      <button onclick="closeMealAdd()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px;">✕</button>
+    </div>
+    <div class="fg1" style="margin-bottom:.75rem;">
+      <input type="text" id="meal-add-search" placeholder="Search recipes…" oninput="renderAddMealRecipes(this.value)" style="width:100%;"/>
+    </div>
+    <div id="meal-add-recipes" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:1rem;"></div>
+    <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:.5rem;">
+      <div class="fgl" style="margin-bottom:.5rem;">Or add a custom meal</div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="meal-add-custom" placeholder="e.g. Takeout pizza" style="flex:1;"/>
+        <button class="btn btn-p" onclick="addCustomMeal()">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RECIPE FORM MODAL -->
+<div class="cf-overlay" id="recipe-form-overlay">
+  <div class="cf-modal" onclick="event.stopPropagation()" style="max-width:560px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+      <div class="ct" style="margin:0;" id="rf-title">New Recipe</div>
+      <button onclick="closeRecipeForm()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px;">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div class="fg1">
+        <label class="fgl">Recipe Name <span style="color:var(--danger);">*</span></label>
+        <input type="text" id="rf-name" placeholder="e.g. Spaghetti Bolognese"/>
+      </div>
+      <div class="fg1">
+        <label class="fgl">Type</label>
+        <select id="rf-type" style="width:100%;"></select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div class="fg1">
+        <label class="fgl">Cook Time <span style="font-weight:400;color:var(--text3);font-size:11px;">minutes</span></label>
+        <input type="number" id="rf-time" placeholder="30" min="1" style="width:100%;"/>
+      </div>
+    </div>
+    <div class="fg1" style="margin-bottom:12px;">
+      <label class="fgl">Instructions <span style="font-weight:400;color:var(--text3);font-size:11px;">optional</span></label>
+      <textarea id="rf-instructions" rows="3" placeholder="Step-by-step instructions…" style="resize:vertical;width:100%;"></textarea>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+        <label class="fgl" style="margin:0;">Ingredients</label>
+        <button class="btn" onclick="addIngredientRow()" style="font-size:12px;padding:4px 10px;">+ Add</button>
+      </div>
+      <div id="rf-ingredients" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+    <div style="margin-bottom:1.25rem;">
+      <label class="fgl" style="margin-bottom:.5rem;display:block;">Preferences</label>
+      <div id="rf-prefs" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-p" onclick="saveRecipe()">Save Recipe</button>
+      <button class="btn" id="rf-delete-btn" onclick="deleteRecipeConfirm()" style="display:none;color:var(--danger);border-color:var(--danger);">Delete</button>
+      <button class="btn" onclick="closeRecipeForm()">Cancel</button>
+    </div>
+    <div class="toast t-ok" id="rf-ok" style="margin-top:.5rem;"></div>
+    <div class="toast t-err" id="rf-err" style="margin-top:.5rem;"></div>
+  </div>
+</div>
+
+<!-- RECIPE DETAIL MODAL -->
+<div class="cf-overlay" id="recipe-detail-overlay" onclick="closeRecipeDetailOverlay(event)">
+  <div class="cf-modal" onclick="event.stopPropagation()" style="max-width:480px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div class="ct" style="margin:0;" id="recipe-detail-title">Recipe</div>
+      <button onclick="closeRecipeDetail()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px;">✕</button>
+    </div>
+    <div id="recipe-detail-body"></div>
+  </div>
+</div>
+
 <!-- CHORE ASSIGNMENT -->
 <div class="pg" id="pg-chores">
   <h1 class="pg-title">Chore Assignment</h1>
@@ -1238,5 +1322,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="script.js"></script>
+<script src="meals.js"></script>
 </body>
 </html>
