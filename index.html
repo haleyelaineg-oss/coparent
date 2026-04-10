@@ -564,6 +564,23 @@
   <h1 class="pg-title">Health & Medical</h1>
   <p class="pg-sub">Track illnesses, symptoms, medications, and doctor visits.</p>
 
+  <div class="view-tabs" style="margin-bottom:1.5rem;">
+    <button class="vtab active" id="htab-new" onclick="setHealthTab('new',this)">New Entry</button>
+    <button class="vtab" id="htab-history" onclick="setHealthTab('history',this)">History</button>
+  </div>
+
+  <div id="health-panel-history" style="display:none;">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;" id="health-hist-filters">
+      <button class="fpill active" id="hhf-all" onclick="setHealthHistFilter('all',this)">All Kids</button>
+      <button class="fpill" id="hhf-Landon" onclick="setHealthHistFilter('Landon',this)">Landon</button>
+      <button class="fpill" id="hhf-Luke" onclick="setHealthHistFilter('Luke',this)">Luke</button>
+      <button class="fpill" id="hhf-Leo" onclick="setHealthHistFilter('Leo',this)">Leo</button>
+      <button class="fpill" id="hhf-active" onclick="setHealthHistFilter('active',this)" style="margin-left:auto;">Active only</button>
+    </div>
+    <div id="health-history-list"></div>
+  </div>
+
+  <div id="health-panel-new">
   <div class="card">
     <div class="logger-row">
       <span>Logging as</span>
@@ -706,6 +723,7 @@
   </div>
   <div class="toast t-ok" id="health-ok"></div>
   <div class="toast t-err" id="health-err"></div>
+  </div><!-- end health-panel-new -->
 </div>
 
 <!-- MEMORIES -->

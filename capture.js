@@ -12,6 +12,11 @@ var qcMemType = '';
 var qcMemTypeName = '';
 var qcHealthKid = '';
 var qcHealthSymptoms = [];
+var qcHealthMeds = [];
+var qcHealthMode = 'new';       // 'new' | 'update'
+var qcHealthExistingId = null;  // health_log id being updated
+var qcHealthUpdateType = 'temperature';
+var qcHealthRecentLogs = [];
 var inboxEntries = [];
 var inboxFilter = 'all';
 
@@ -65,7 +70,7 @@ function buildQCModalHTML() {
     return '<div class="kchip" id="qchk-' + k + '" onclick="setQCHealthKid(\'' + k + '\',this)">' + k + '</div>';
   }).join('');
 
-  var healthSymChips = (HEALTH_SYMPTOMS || []).filter(function (s) { return s !== 'Other'; }).map(function (s) {
+  var healthSymChips = (HEALTH_SYMPTOMS || []).map(function (s) {
     var sid = 'qchs-' + s.replace(/\W+/g, '');
     return '<div class="kchip" id="' + sid + '" onclick="toggleQCSymptom(\'' + s.replace(/'/g, "\\'") + '\',this)">' + s + '</div>';
   }).join('');
@@ -184,14 +189,66 @@ function buildQCModalHTML() {
     '    <label class="fgl">Which kid?</label>',
     '    <div class="source-row" style="margin-top:6px;" id="qc-health-kids">' + healthKidChips + '</div>',
     '  </div>',
+
+    // Recent entries — shown after kid selected
+    '  <div id="qc-health-recent" style="display:none;margin-bottom:12px;">',
+    '    <div class="fgl" style="margin-bottom:6px;">Update an existing entry?</div>',
+    '    <div id="qc-health-recent-list" style="display:flex;flex-direction:column;gap:6px;"></div>',
+    '    <button class="btn btn-sm" id="qc-health-new-btn" onclick="setQCHealthMode(\'new\')" style="margin-top:8px;font-size:12px;display:none;">+ New entry instead</button>',
+    '  </div>',
+
+    // New entry fields
+    '  <div id="qc-health-new-fields" style="display:none;">',
     '  <div class="fg1" style="margin-bottom:12px;">',
     '    <label class="fgl">Symptoms <span style="font-weight:400;color:var(--text3);font-size:11px;">(optional)</span></label>',
     '    <div class="source-row" style="margin-top:6px;flex-wrap:wrap;" id="qc-health-syms">' + healthSymChips + '</div>',
     '  </div>',
+    '  <div class="fg" style="margin-bottom:12px;">',
+    '    <div class="fg1">',
+    '      <label class="fgl">Temperature °F <span style="font-weight:400;color:var(--text3);font-size:11px;">(optional)</span></label>',
+    '      <input type="number" id="qc-health-temp" step="0.1" min="96" max="106" placeholder="98.6" style="margin-top:6px;">',
+    '    </div>',
+    '    <div class="fg1">',
+    '      <label class="fgl">Time taken</label>',
+    '      <input type="time" id="qc-health-temp-time" style="margin-top:6px;">',
+    '    </div>',
+    '  </div>',
+    '  <div class="fg1" style="margin-bottom:8px;">',
+    '    <label class="fgl">Medications given <span style="font-weight:400;color:var(--text3);font-size:11px;">(optional)</span></label>',
+    '    <div id="qc-health-meds-list" style="margin-top:6px;display:flex;flex-direction:column;gap:6px;"></div>',
+    '    <button class="btn btn-sm" onclick="addQCHealthMed()" style="margin-top:8px;font-size:12px;">+ Add medication</button>',
+    '  </div>',
     '  <div class="fg1" style="margin-bottom:12px;">',
     '    <label class="fgl">Notes <span style="font-weight:400;color:var(--text3);font-size:11px;">(optional)</span></label>',
-    '    <textarea id="qc-health-notes" style="margin-top:6px;min-height:60px;" placeholder="Temp, meds given, anything else..."></textarea>',
+    '    <textarea id="qc-health-notes" style="margin-top:6px;min-height:50px;" placeholder="Anything else..."></textarea>',
     '  </div>',
+    '  </div>', // end qc-health-new-fields
+
+    // Update fields (when updating an existing entry)
+    '  <div id="qc-health-update-fields" style="display:none;">',
+    '  <div class="source-row" style="margin-bottom:10px;" id="qc-health-update-type-row">',
+    '    <div class="kchip on" id="qchut-temperature" onclick="setQCHealthUpdateType(\'temperature\',this)">Temperature</div>',
+    '    <div class="kchip" id="qchut-medication" onclick="setQCHealthUpdateType(\'medication\',this)">Medication</div>',
+    '    <div class="kchip" id="qchut-note" onclick="setQCHealthUpdateType(\'note\',this)">Note</div>',
+    '  </div>',
+    '  <div id="qchuf-temperature">',
+    '    <div class="fg" style="margin-bottom:12px;">',
+    '      <div class="fg1"><label class="fgl">Temperature °F</label><input type="number" id="qchuf-temp-val" step="0.1" min="96" max="106" placeholder="98.6" style="margin-top:6px;"></div>',
+    '      <div class="fg1"><label class="fgl">Time taken</label><input type="time" id="qchuf-temp-time" style="margin-top:6px;"></div>',
+    '    </div>',
+    '  </div>',
+    '  <div id="qchuf-medication" style="display:none;">',
+    '    <div class="fg" style="margin-bottom:12px;">',
+    '      <div class="fg1"><label class="fgl">Medication</label><input type="text" id="qchuf-med-name" placeholder="e.g. Tylenol" style="margin-top:6px;"></div>',
+    '      <div class="fg1"><label class="fgl">Dose</label><input type="text" id="qchuf-med-dose" placeholder="e.g. 10ml" style="margin-top:6px;"></div>',
+    '    </div>',
+    '    <div class="fg1" style="margin-bottom:12px;"><label class="fgl">Time given</label><input type="time" id="qchuf-med-time" style="margin-top:6px;"></div>',
+    '  </div>',
+    '  <div id="qchuf-note" style="display:none;">',
+    '    <div class="fg1" style="margin-bottom:12px;"><label class="fgl">Note</label><textarea id="qchuf-note-text" style="margin-top:6px;min-height:60px;" placeholder="Note..."></textarea></div>',
+    '  </div>',
+    '  </div>', // end qc-health-update-fields
+
     '  <div id="qc-health-msg" style="font-size:13px;min-height:18px;margin-bottom:4px;"></div>',
     '  <div class="btn-row">',
     '    <button class="btn" onclick="backToQCHub()">Cancel</button>',
@@ -455,18 +512,135 @@ async function saveQCNote() {
 
 // ── HEALTH FORM ───────────────────────────────────────────────────────────────
 function resetQCHealth() {
-  qcHealthKid = ''; qcHealthSymptoms = [];
+  qcHealthKid = ''; qcHealthSymptoms = []; qcHealthMeds = [];
+  qcHealthMode = 'new'; qcHealthExistingId = null; qcHealthRecentLogs = [];
+  qcHealthUpdateType = 'temperature';
   document.querySelectorAll('#qc-health-kids .kchip').forEach(function (c) { c.classList.remove('on'); });
+  document.getElementById('qc-health-recent').style.display = 'none';
+  document.getElementById('qc-health-recent-list').innerHTML = '';
+  document.getElementById('qc-health-new-fields').style.display = 'none';
+  document.getElementById('qc-health-update-fields').style.display = 'none';
   document.querySelectorAll('#qc-health-syms .kchip').forEach(function (c) { c.classList.remove('on'); });
+  document.getElementById('qc-health-temp').value = '';
+  document.getElementById('qc-health-temp-time').value = '';
+  document.getElementById('qc-health-meds-list').innerHTML = '';
   document.getElementById('qc-health-notes').value = '';
   setQCMsg('health', '');
 }
 
-function setQCHealthKid(kid, el) {
+function setQCHealthMode(mode) {
+  qcHealthMode = mode;
+  qcHealthExistingId = null;
+  document.getElementById('qc-health-new-fields').style.display = mode === 'new' ? '' : 'none';
+  document.getElementById('qc-health-update-fields').style.display = mode === 'update' ? '' : 'none';
+  // Deselect any highlighted recent entry
+  document.querySelectorAll('#qc-health-recent-list .qc-recent-card').forEach(function (c) { c.classList.remove('on'); });
+  setQCMsg('health', '');
+}
+
+function setQCHealthUpdateType(type, el) {
+  qcHealthUpdateType = type;
+  ['temperature', 'medication', 'note'].forEach(function (t) {
+    document.getElementById('qchut-' + t).classList.toggle('on', t === type);
+    document.getElementById('qchuf-' + t).style.display = t === type ? '' : 'none';
+  });
+}
+
+async function setQCHealthKid(kid, el) {
   qcHealthKid = kid;
   document.querySelectorAll('#qc-health-kids .kchip').forEach(function (c) { c.classList.remove('on'); });
   el.classList.add('on');
+
+  // Load recent active entries for this kid
+  var { data } = await sb.from('health_log')
+    .select('id, started_date, symptoms, notes, status')
+    .eq('kid', kid)
+    .eq('status', 'active')
+    .order('started_date', { ascending: false })
+    .limit(5);
+
+  qcHealthRecentLogs = data || [];
+  var recentEl = document.getElementById('qc-health-recent');
+  var listEl = document.getElementById('qc-health-recent-list');
+  var newBtn = document.getElementById('qc-health-new-btn');
+
+  if (!qcHealthRecentLogs.length) {
+    // No active entries — go straight to new entry mode
+    recentEl.style.display = 'none';
+    setQCHealthMode('new');
+    return;
+  }
+
+  // Show recent entries to choose from
+  recentEl.style.display = '';
+  newBtn.style.display = '';
+  listEl.innerHTML = qcHealthRecentLogs.map(function (log) {
+    var date = new Date(log.started_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    var syms = (log.symptoms || []).map(function (s) { return s.name; }).join(', ') || 'No symptoms listed';
+    return '<div class="qc-recent-card" id="qcrc-' + log.id + '" onclick="selectQCHealthExisting(\'' + log.id + '\')" ' +
+      'style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;background:var(--surface);transition:all .12s;">' +
+      '<div style="font-size:13px;font-weight:500;color:var(--text);">' + date + '</div>' +
+      '<div style="font-size:12px;color:var(--text3);">' + syms + '</div>' +
+      '</div>';
+  }).join('');
+
+  // Reset fields
+  document.getElementById('qc-health-new-fields').style.display = 'none';
+  document.getElementById('qc-health-update-fields').style.display = 'none';
+  setQCMsg('health', '');
 }
+
+function selectQCHealthExisting(id) {
+  qcHealthExistingId = id;
+  qcHealthMode = 'update';
+  document.querySelectorAll('#qc-health-recent-list .qc-recent-card').forEach(function (c) {
+    c.style.borderColor = '';
+    c.style.background = 'var(--surface)';
+  });
+  var card = document.getElementById('qcrc-' + id);
+  if (card) { card.style.borderColor = 'var(--accent)'; card.style.background = 'var(--accent-l)'; }
+
+  // Set default time on update fields
+  var now = new Date();
+  var hh = String(now.getHours()).padStart(2, '0');
+  var mm = String(now.getMinutes()).padStart(2, '0');
+  document.getElementById('qchuf-temp-time').value = hh + ':' + mm;
+  document.getElementById('qchuf-med-time').value = hh + ':' + mm;
+
+  document.getElementById('qc-health-new-fields').style.display = 'none';
+  document.getElementById('qc-health-update-fields').style.display = '';
+  setQCMsg('health', '');
+}
+
+function addQCHealthMed() {
+  var now = new Date();
+  var hh = String(now.getHours()).padStart(2, '0');
+  var mm = String(now.getMinutes()).padStart(2, '0');
+  qcHealthMeds.push({ name: '', time: hh + ':' + mm });
+  renderQCHealthMeds();
+}
+
+function removeQCHealthMed(i) {
+  qcHealthMeds.splice(i, 1);
+  renderQCHealthMeds();
+}
+
+function updateQCHealthMed(i, field, val) {
+  if (qcHealthMeds[i]) qcHealthMeds[i][field] = val;
+}
+
+function renderQCHealthMeds() {
+  var el = document.getElementById('qc-health-meds-list');
+  if (!el) return;
+  el.innerHTML = qcHealthMeds.map(function (m, i) {
+    return '<div class="med-row">' +
+      '<input type="text" class="med-name" placeholder="Medication" value="' + (m.name || '') + '" oninput="updateQCHealthMed(' + i + ',\'name\',this.value)">' +
+      '<input type="time" class="med-time" value="' + (m.time || '') + '" oninput="updateQCHealthMed(' + i + ',\'time\',this.value)">' +
+      '<button class="att-rm" onclick="removeQCHealthMed(' + i + ')">×</button>' +
+    '</div>';
+  }).join('');
+}
+
 
 function toggleQCSymptom(sym, el) {
   el.classList.toggle('on');
@@ -476,18 +650,83 @@ function toggleQCSymptom(sym, el) {
 
 async function saveQCHealth() {
   if (!qcHealthKid) { setQCMsg('health', 'Please select a kid.', true); return; }
-  var notes = document.getElementById('qc-health-notes').value.trim();
-  if (!qcHealthSymptoms.length && !notes) { setQCMsg('health', 'Please add symptoms or notes.', true); return; }
   setQCMsg('health', '');
-  var { error } = await sb.from('health_log').insert({
+  var logger = ls('logger') || 'Haley';
+
+  // ── Update existing entry ──────────────────────────────────────────────────
+  if (qcHealthMode === 'update') {
+    if (!qcHealthExistingId) { setQCMsg('health', 'Please select an entry to update.', true); return; }
+    var row = { health_log_id: qcHealthExistingId, logged_by: logger, update_type: qcHealthUpdateType };
+
+    if (qcHealthUpdateType === 'temperature') {
+      var tempVal = document.getElementById('qchuf-temp-val').value;
+      if (!tempVal) { setQCMsg('health', 'Enter a temperature.', true); return; }
+      var tempTime = document.getElementById('qchuf-temp-time').value;
+      var dt = new Date();
+      if (tempTime) { var tp = tempTime.split(':'); dt.setHours(parseInt(tp[0]), parseInt(tp[1]), 0); }
+      row.temperature = parseFloat(tempVal);
+      row.given_at = dt.toISOString();
+    } else if (qcHealthUpdateType === 'medication') {
+      var medName = document.getElementById('qchuf-med-name').value.trim();
+      if (!medName) { setQCMsg('health', 'Enter a medication name.', true); return; }
+      var medTime = document.getElementById('qchuf-med-time').value;
+      var mdt = new Date();
+      if (medTime) { var mp = medTime.split(':'); mdt.setHours(parseInt(mp[0]), parseInt(mp[1]), 0); }
+      row.medication_name = medName;
+      row.medication_dose = document.getElementById('qchuf-med-dose').value.trim() || null;
+      row.given_at = mdt.toISOString();
+    } else {
+      var noteText = document.getElementById('qchuf-note-text').value.trim();
+      if (!noteText) { setQCMsg('health', 'Enter a note.', true); return; }
+      row.notes = noteText;
+    }
+
+    var { error: updErr } = await sb.from('health_updates').insert(row);
+    if (updErr) { setQCMsg('health', 'Save failed: ' + updErr.message, true); return; }
+    setQCMsg('health', 'Update saved!');
+    setTimeout(closeQC, 800);
+    return;
+  }
+
+  // ── New entry ──────────────────────────────────────────────────────────────
+  var notes = document.getElementById('qc-health-notes').value.trim();
+  var tempValNew = document.getElementById('qc-health-temp').value;
+  var hasMeds = qcHealthMeds.some(function (m) { return m.name.trim(); });
+  if (!qcHealthSymptoms.length && !notes && !tempValNew && !hasMeds) {
+    setQCMsg('health', 'Please add at least one symptom, temp, med, or note.', true); return;
+  }
+
+  var { data: logData, error: logErr } = await sb.from('health_log').insert({
     kid: qcHealthKid,
-    logged_by: ls('logger') || 'Haley',
+    logged_by: logger,
     started_date: new Date().toISOString().slice(0, 10),
     symptoms: qcHealthSymptoms.map(function (s) { return { name: s }; }),
     notes: notes || null,
     status: 'active',
+  }).select();
+  if (logErr) { setQCMsg('health', 'Save failed: ' + logErr.message, true); return; }
+
+  var logId = logData[0].id;
+  var updates = [];
+
+  if (tempValNew) {
+    var tempTimeNew = document.getElementById('qc-health-temp-time').value;
+    var tempDt = new Date();
+    if (tempTimeNew) { var ttp = tempTimeNew.split(':'); tempDt.setHours(parseInt(ttp[0]), parseInt(ttp[1])); }
+    updates.push({ health_log_id: logId, logged_by: logger, update_type: 'temperature', temperature: parseFloat(tempValNew), given_at: tempDt.toISOString() });
+  }
+
+  qcHealthMeds.filter(function (m) { return m.name.trim(); }).forEach(function (med) {
+    var givenDt = new Date();
+    if (med.time) { var mp = med.time.split(':'); givenDt.setHours(parseInt(mp[0]), parseInt(mp[1])); }
+    updates.push({ health_log_id: logId, logged_by: logger, update_type: 'medication', medication_name: med.name.trim(), given_at: givenDt.toISOString() });
   });
-  if (error) { setQCMsg('health', 'Save failed: ' + error.message, true); return; }
+
+  if (updates.length) {
+    var { error: updErr2 } = await sb.from('health_updates').insert(updates);
+    if (updErr2) { setQCMsg('health', 'Saved but details failed: ' + updErr2.message, true); return; }
+  }
+
   setQCMsg('health', 'Saved!');
   setTimeout(closeQC, 800);
 }
