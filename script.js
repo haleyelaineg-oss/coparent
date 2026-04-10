@@ -1185,6 +1185,132 @@ async function saveHealthUpdate(id) {
   renderHealthHistory();
 }
 
+// ── HEALTH ENTRY MODE SWITCHER ────────────────────────────────────────────────
+var healthEntryMode = 'new';
+var healthUpdateSelectedId = null;
+var healthUpdateEntryType = 'temperature';
+
+function setHealthEntryMode(mode) {
+  healthEntryMode = mode;
+  healthUpdateSelectedId = null;
+  document.getElementById('hmode-new').classList.toggle('on', mode === 'new');
+  document.getElementById('hmode-update').classList.toggle('on', mode === 'update');
+  document.getElementById('health-new-form').style.display = mode === 'new' ? '' : 'none';
+  document.getElementById('health-update-panel').style.display = mode === 'update' ? '' : 'none';
+  if (mode === 'update') {
+    // Reset update panel
+    document.querySelectorAll('#health-update-kid-row .kchip').forEach(function (c) { c.classList.remove('on'); });
+    document.getElementById('health-update-entries').style.display = 'none';
+    document.getElementById('health-update-form').style.display = 'none';
+    // Default time fields to now
+    var now = new Date();
+    var hh = String(now.getHours()).padStart(2, '0');
+    var mm = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('huf-temp-time').value = hh + ':' + mm;
+    document.getElementById('huf-med-time').value = hh + ':' + mm;
+  }
+}
+
+async function loadHealthUpdateEntries(kid, el) {
+  document.querySelectorAll('#health-update-kid-row .kchip').forEach(function (c) { c.classList.remove('on'); });
+  el.classList.add('on');
+  healthUpdateSelectedId = null;
+  document.getElementById('health-update-form').style.display = 'none';
+
+  var { data, error } = await sb.from('health_log')
+    .select('id, started_date, symptoms, notes, status')
+    .eq('kid', kid)
+    .eq('status', 'active')
+    .order('started_date', { ascending: false })
+    .limit(10);
+
+  var entriesEl = document.getElementById('health-update-entries');
+  var listEl = document.getElementById('health-update-entries-list');
+  entriesEl.style.display = '';
+
+  if (error || !data || !data.length) {
+    listEl.innerHTML = '<div class="empty" style="padding:1rem 0;font-size:13px;">No active entries for ' + kid + '.</div>';
+    return;
+  }
+
+  listEl.innerHTML = data.map(function (log) {
+    var date = new Date(log.started_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    var syms = (log.symptoms || []).map(function (s) { return s.name; }).join(', ') || 'No symptoms listed';
+    return '<div class="set-item" id="hue-' + log.id + '" onclick="selectHealthUpdateEntry(\'' + log.id + '\')" style="cursor:pointer;transition:all .12s;">' +
+      '<div class="set-item-label">' +
+        '<div style="font-weight:500;">' + date + '</div>' +
+        '<div style="font-size:12px;color:var(--text3);margin-top:2px;">' + syms + '</div>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--text3);">Select →</div>' +
+    '</div>';
+  }).join('');
+}
+
+function selectHealthUpdateEntry(id) {
+  healthUpdateSelectedId = id;
+  document.querySelectorAll('#health-update-entries-list .set-item').forEach(function (el) {
+    el.style.background = '';
+    el.style.borderColor = '';
+  });
+  var el = document.getElementById('hue-' + id);
+  if (el) { el.style.background = 'var(--accent-l)'; el.style.borderColor = 'var(--accent)'; }
+  document.getElementById('health-update-form').style.display = '';
+  document.getElementById('hupdate-ok').style.display = 'none';
+  document.getElementById('hupdate-err').style.display = 'none';
+}
+
+function setHealthUpdateEntryType(type) {
+  healthUpdateEntryType = type;
+  ['temperature', 'medication', 'note'].forEach(function (t) {
+    document.getElementById('hut-' + t).classList.toggle('on', t === type);
+    document.getElementById('huf-' + t + '-section').style.display = t === type ? '' : 'none';
+  });
+}
+
+async function saveHealthEntryUpdate() {
+  if (!healthUpdateSelectedId) { showToast('hupdate', 'err', 'No entry selected.'); return; }
+  var logger = ls('logger') || 'Haley';
+  var row = { health_log_id: healthUpdateSelectedId, logged_by: logger, update_type: healthUpdateEntryType };
+
+  if (healthUpdateEntryType === 'temperature') {
+    var tempVal = document.getElementById('huf-temp-val').value;
+    if (!tempVal) { showToast('hupdate', 'err', 'Enter a temperature.'); return; }
+    var tempTime = document.getElementById('huf-temp-time').value;
+    var dt = new Date();
+    if (tempTime) { var tp = tempTime.split(':'); dt.setHours(parseInt(tp[0]), parseInt(tp[1]), 0); }
+    row.temperature = parseFloat(tempVal);
+    row.given_at = dt.toISOString();
+  } else if (healthUpdateEntryType === 'medication') {
+    var medName = document.getElementById('huf-med-name').value.trim();
+    if (!medName) { showToast('hupdate', 'err', 'Enter a medication name.'); return; }
+    var medTime = document.getElementById('huf-med-time').value;
+    var mdt = new Date();
+    if (medTime) { var mp = medTime.split(':'); mdt.setHours(parseInt(mp[0]), parseInt(mp[1]), 0); }
+    row.medication_name = medName;
+    row.medication_dose = document.getElementById('huf-med-dose').value.trim() || null;
+    row.given_at = mdt.toISOString();
+  } else {
+    var noteText = document.getElementById('huf-note-text').value.trim();
+    if (!noteText) { showToast('hupdate', 'err', 'Enter a note.'); return; }
+    row.notes = noteText;
+  }
+
+  var { error } = await sb.from('health_updates').insert(row);
+  if (error) { showToast('hupdate', 'err', 'Save failed: ' + error.message); return; }
+  showToast('hupdate', 'ok', 'Update saved!');
+
+  // Reset form fields for next update
+  document.getElementById('huf-temp-val').value = '';
+  document.getElementById('huf-med-name').value = '';
+  document.getElementById('huf-med-dose').value = '';
+  document.getElementById('huf-note-text').value = '';
+  healthUpdateSelectedId = null;
+  document.getElementById('health-update-form').style.display = 'none';
+  document.querySelectorAll('#health-update-entries-list .set-item').forEach(function (el) {
+    el.style.background = ''; el.style.borderColor = '';
+  });
+}
+
 async function markHealthResolved(id) {
   var today = new Date().toISOString().slice(0, 10);
   var { error } = await sb.from('health_log').update({ status: 'resolved', resolved_date: today }).eq('id', id);

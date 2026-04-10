@@ -581,6 +581,89 @@
   </div>
 
   <div id="health-panel-new">
+
+  <!-- Mode switcher -->
+  <div style="display:flex;gap:10px;margin-bottom:1.25rem;">
+    <button class="cat-btn on" id="hmode-new" onclick="setHealthEntryMode('new')" style="flex:1;">
+      <div class="cat-name">New Entry</div>
+      <div class="cat-desc">Log a new illness or incident</div>
+    </button>
+    <button class="cat-btn" id="hmode-update" onclick="setHealthEntryMode('update')" style="flex:1;">
+      <div class="cat-name">Update Existing</div>
+      <div class="cat-desc">Add temp, meds, or a note to an active entry</div>
+    </button>
+  </div>
+
+  <!-- Update existing panel -->
+  <div id="health-update-panel" style="display:none;">
+    <div class="card">
+      <div class="ct">Which kid?</div>
+      <div class="kids-row" id="health-update-kid-row">
+        <div class="kchip" id="hukid-Landon" onclick="loadHealthUpdateEntries('Landon',this)">Landon</div>
+        <div class="kchip" id="hukid-Luke" onclick="loadHealthUpdateEntries('Luke',this)">Luke</div>
+        <div class="kchip" id="hukid-Leo" onclick="loadHealthUpdateEntries('Leo',this)">Leo</div>
+      </div>
+    </div>
+    <div id="health-update-entries" style="display:none;">
+      <div class="card">
+        <div class="ct">Select entry to update</div>
+        <div id="health-update-entries-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+      <div id="health-update-form" style="display:none;">
+        <div class="card">
+          <div class="ct">Update type</div>
+          <div class="kids-row" style="margin-bottom:1rem;">
+            <div class="kchip on" id="hut-temperature" onclick="setHealthUpdateEntryType('temperature')">Temperature</div>
+            <div class="kchip" id="hut-medication" onclick="setHealthUpdateEntryType('medication')">Medication</div>
+            <div class="kchip" id="hut-note" onclick="setHealthUpdateEntryType('note')">Note</div>
+          </div>
+          <div id="huf-temperature-section">
+            <div class="fg">
+              <div class="fg1">
+                <label class="fgl">Temperature (°F)</label>
+                <input type="number" id="huf-temp-val" step="0.1" min="96" max="106" placeholder="98.6"/>
+              </div>
+              <div class="fg1">
+                <label class="fgl">Time taken</label>
+                <input type="time" id="huf-temp-time"/>
+              </div>
+            </div>
+          </div>
+          <div id="huf-medication-section" style="display:none;">
+            <div class="fg" style="margin-bottom:10px;">
+              <div class="fg1">
+                <label class="fgl">Medication</label>
+                <input type="text" id="huf-med-name" placeholder="e.g. Tylenol"/>
+              </div>
+              <div class="fg1">
+                <label class="fgl">Dose</label>
+                <input type="text" id="huf-med-dose" placeholder="e.g. 10ml"/>
+              </div>
+            </div>
+            <div class="fg1">
+              <label class="fgl">Time given</label>
+              <input type="time" id="huf-med-time" style="max-width:160px;"/>
+            </div>
+          </div>
+          <div id="huf-note-section" style="display:none;">
+            <div class="fg1">
+              <label class="fgl">Note</label>
+              <textarea id="huf-note-text" placeholder="What happened? Any changes in symptoms, behavior, etc."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="setHealthEntryMode('update')">Cancel</button>
+          <button class="btn btn-p" onclick="saveHealthEntryUpdate()">Save Update</button>
+        </div>
+        <div class="toast t-ok" id="hupdate-ok"></div>
+        <div class="toast t-err" id="hupdate-err"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New entry form -->
+  <div id="health-new-form">
   <div class="card">
     <div class="logger-row">
       <span>Logging as</span>
@@ -723,6 +806,7 @@
   </div>
   <div class="toast t-ok" id="health-ok"></div>
   <div class="toast t-err" id="health-err"></div>
+  </div><!-- end health-new-form -->
   </div><!-- end health-panel-new -->
 </div>
 
