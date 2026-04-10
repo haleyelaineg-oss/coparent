@@ -195,6 +195,7 @@ function onAuthenticated() {
   loadEntries().then(updateCount);
   loadPatterns();
   loadChores();
+  updateInboxBadge();
 }
 
 // ── LOGGER ────────────────────────────────────────────────────────────────────
@@ -233,6 +234,7 @@ function nav(page, btn) {
   if (page === 'manage-chores') initManageChores();
   if (page === 'chores') initChoresPage();
   if (page === 'meals') initMealsPage();
+  if (page === 'inbox') initInbox();
   if (page === 'settings') renderThemePicker();
   if (page === 'analytics') initAnalytics();
 }
