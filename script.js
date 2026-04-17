@@ -684,7 +684,6 @@ async function saveEntry() {
     witnesses: document.getElementById('cap-witnesses').value.trim(),
     attachments: await uploadAttachments(capAtts),
     pattern_tags: capPatterns.slice(),
-    flagged: false,
   };
 
   await saveToSupabase(entry, 'cap');
@@ -769,7 +768,6 @@ async function saveMemory() {
     facts: facts,
     quote: document.getElementById('mem-quote').value.trim(),
     severity: null,
-    flagged: false,
     attachments: await uploadAttachments(memAtts),
   };
   await saveToSupabase(entry, 'mem');
@@ -1821,7 +1819,6 @@ async function saveReflection() {
     mary_notes: flowMaryContact ? maryNotes : '',
     facts: '',
     assessment: '',
-    flagged: false,
   };
 
   await saveToSupabase(entry, 'ref');
